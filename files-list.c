@@ -2,7 +2,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <file-properties.h>
 #include <stdio.h>
 
 /*!
@@ -22,12 +22,22 @@ void clear_files_list(files_list_t *list) {
  *  @brief add_file_entry adds a new file to the files list.
  *  It adds the file in an ordered manner (strcmp) and fills its properties
  *  by calling stat on the file.
- *  Il the file already exists, it does nothing and returns 0
+ *  If the file already exists, it does nothing and returns 0
  *  @param list the list to add the file entry into
  *  @param file_path the full path (from the root of the considered tree) of the file
  *  @return 0 if success, -1 else (out of memory)
  */
 files_list_entry_t *add_file_entry(files_list_t *list, char *file_path) {
+    files_list_entry_t *newel = (files_list_entry_t* ) malloc(sizeof(files_list_entry_t));
+    strcpy(newel->path_and_name,file_path);
+    if(!list->head){
+        get_file_stats(newel);
+        add_entry_to_tail(list,newel);
+    }
+    else{
+        }
+
+    }
 }
 
 /*!
@@ -39,6 +49,22 @@ files_list_entry_t *add_file_entry(files_list_t *list, char *file_path) {
  * @return 0 in case of success, -1 else
  */
 int add_entry_to_tail(files_list_t *list, files_list_entry_t *entry) {
+    if(!list->head){
+        list->head=entry;
+        list->tail=entry;
+    }
+    else{
+        if(list->head==list->tail){
+            (list->head)->next=entry;
+            entry->prev=list->head;
+            list->tail=entry;
+        }
+        else{
+            entry->prev=list->tail;
+            (list->tail)->next=entry;
+            list->tail=entry;
+        }
+    }
 }
 
 /*!

@@ -4,9 +4,7 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <string.h>
-
-typedef enum {DATE_SIZE_ONLY, NO_PARALLEL} long_opt_values;
-
+typedef enum {DATE_SIZE_ONLY, NO_PARALLEL} param_type;
 /*!
  * @brief function display_help displays a brief manual for the program usage
  * @param my_name is the name of the binary file
@@ -42,39 +40,46 @@ void init_configuration(configuration_t *the_config) {
  * @return -1 if configuration cannot succeed, 0 when ok
  */
 int set_configuration(configuration_t *the_config, int argc, char *argv[]) {
-    bool checkSdOption =true;
     // Copy source_dir and destination_dir in the_config
-    strcpy(the_config->source,argv[1]);
-    strcpy(the_config->destination,argv[2]);
-
     // Check source_dir , destination_dir existence
-    if(!strcmp(the_config->source,"") || !strcmp(the_config->destination,"")){
-        checkSdOption=false;
-    }
-    if(checkSdOption) {
-        int opt = 0;
-        struct option my_opts[] = {
-                {.name="date-size-only", .has_arg=1, .flag=0, .val='d'},
-                {.name="no-parallel", .has_arg=1, .flag=0, .val='p'},
-                {.name="verbose", .has_arg=0, .flag=0, .val='c'},
-                {.name=0, .has_arg=0, .flag=0, .val=0}, // last element must be zero
-        };
 
-        while ((opt = (getopt_long(argc, argv, "n::", my_opts, NULL))) != -1) {
-            switch (opt) {
-                case 'd':
-                    the_config->uses_md5=optarg;
+    int opt = 0,parameter_count=0;
+    struct option my_opts[] = {
+            {.name="date-size-only", .has_arg=0, .flag=0, .val='d'},
+            {.name="no-parallel", .has_arg=0, .flag=0, .val='p'},
+            {.name=0, .has_arg=0, .flag=0, .val=0}, // last element must be zero
+    };
+    while ((opt = (getopt_long(argc, argv, "n::", my_opts, NULL))) != -1) {
+        switch (opt) {
+            case 'd':
+                the_config->uses_md5=optarg;
+                parameter_count++;
+                break;
+            case'p':
+                the_config->is_parallel=optarg;
+                parameter_count++;
+                break;
+            case 'n':
+                if(optarg){
+                    the_config->processes_count=(int) strtol(optarg,NULL,10);
+                    parameter_count++;
                     break;
-                case 'p':
-                    the_config->is_parallel=optarg;
+                }
+                if(optind != argc){
+                    the_config->processes_count=(int) strtol(argv[optind],NULL,10);
+                    parameter_count+=2;
                     break;
-                case 'n':
-                    break;
-            }
+                }
+                break;
         }
-        return 0;
     }
-    else{
+    if((argc-parameter_count)<2){
         return -1;
+    }
+    else {
+        // Copy source_dir and destination_dir in the_config
+        strcpy(the_config->source,argv[argc-1]);
+        strcpy(the_config->destination,argv[argc-2]);
+        return 0;
     }
 }

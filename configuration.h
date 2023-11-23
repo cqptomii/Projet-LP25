@@ -2,10 +2,11 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#define STR_MAX 1024
 
 typedef struct {
-    char source[1024];
-    char destination[1024];
+    char source[STR_MAX];
+    char destination[STR_MAX];
     uint8_t processes_count;
     bool is_parallel;
     bool uses_md5;

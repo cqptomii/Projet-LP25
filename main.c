@@ -24,7 +24,6 @@ int main(int argc, char *argv[]) {
     if (set_configuration(&my_config, argc, argv) == -1) {
         return -1;
     }
-
     // Check directories
     if (!directory_exists(my_config.source) || !directory_exists(my_config.destination)) {
         printf("Either source or destination directory do not exist\nAborting\n");
@@ -45,6 +44,5 @@ int main(int argc, char *argv[]) {
     
     // Clean resources
     clean_processes(&my_config, &processes_context);
-
     return 0;
 }
