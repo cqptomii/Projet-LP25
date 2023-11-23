@@ -30,13 +30,50 @@ void clear_files_list(files_list_t *list) {
 files_list_entry_t *add_file_entry(files_list_t *list, char *file_path) {
     files_list_entry_t *newel = (files_list_entry_t* ) malloc(sizeof(files_list_entry_t));
     strcpy(newel->path_and_name,file_path);
-    if(!list->head){
-        get_file_stats(newel);
-        add_entry_to_tail(list,newel);
+    newel->next=NULL;
+    newel->prev=NULL;
+    if(get_file_stats(newel)==-1){
+        printf("Error during get file stat \n");
     }
-    else{
+    else {
+        /*
+         * Update newel stats
+         *
+         */
+        if (!list->head) {
+            if (add_entry_to_tail(list, newel)) {
+                printf("Error during add entry to tail \n");
+            }
         }
-
+        else {
+            files_list_entry_t *cmp = list->head;
+            if (strcmp(file_path, cmp->path_and_name) < 0) {
+                newel->next = cmp;
+                cmp->prev = newel;
+                list = (files_list_t *) newel;
+            }
+            else {
+                while (cmp->next && strcmp(file_path, (cmp->next)->path_and_name) > 0) {
+                    cmp = cmp->next;
+                }
+                if (!cmp->next) {
+                    if (add_entry_to_tail(list, newel)) {
+                        printf("Error during add entry to tail \n");
+                    }
+                }
+                else {
+                    if (!strcmp(file_path, (cmp->next)->path_and_name)) {
+                        return 0;
+                    }
+                    else {
+                        newel->next = cmp->next;
+                        newel->prev = cmp;
+                        (cmp->next)->prev = newel;
+                        cmp->next = newel;
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -58,13 +95,16 @@ int add_entry_to_tail(files_list_t *list, files_list_entry_t *entry) {
             (list->head)->next=entry;
             entry->prev=list->head;
             list->tail=entry;
+            return 0;
         }
         else{
             entry->prev=list->tail;
             (list->tail)->next=entry;
             list->tail=entry;
+            return 0;
         }
     }
+    return -1;
 }
 
 /*!
