@@ -27,53 +27,60 @@ void clear_files_list(files_list_t *list) {
  *  @param file_path the full path (from the root of the considered tree) of the file
  *  @return 0 if success, -1 else (out of memory)
  */
-files_list_entry_t *add_file_entry(files_list_t *list, char *file_path) {
+int add_file_entry(files_list_t *list, char *file_path) {
     files_list_entry_t *newel = (files_list_entry_t* ) malloc(sizeof(files_list_entry_t));
     strcpy(newel->path_and_name,file_path);
     newel->next=NULL;
     newel->prev=NULL;
     if(get_file_stats(newel)==-1){
-        printf("Error during get file stat \n");
+        printf("Error during get_file_stats \n");
+        return -1;
     }
     else {
-        /*
-         * Update newel stats
-         *
-         */
-        if (!list->head) {
-            if (add_entry_to_tail(list, newel)) {
-                printf("Error during add entry to tail \n");
-            }
-        }
-        else {
-            files_list_entry_t *cmp = list->head;
-            if (strcmp(file_path, cmp->path_and_name) < 0) {
-                newel->next = cmp;
-                cmp->prev = newel;
-                list = (files_list_t *) newel;
+        if(list) {
+            if (!list->head) {
+                if (add_entry_to_tail(list, newel)) {
+                    printf("Error during add entry to tail \n");
+                    return -1;
+                }
             }
             else {
-                while (cmp->next && strcmp(file_path, (cmp->next)->path_and_name) > 0) {
-                    cmp = cmp->next;
-                }
-                if (!cmp->next) {
-                    if (add_entry_to_tail(list, newel)) {
-                        printf("Error during add entry to tail \n");
-                    }
+                if (strcmp(file_path, (list->head)->path_and_name) < 0) {
+                    list->head->prev=newel;
+                    newel->next=list->head;
+                    list->head = newel;
+                    return 0;
                 }
                 else {
-                    if (!strcmp(file_path, (cmp->next)->path_and_name)) {
-                        return 0;
+                    files_list_entry_t *cmp = list->head;
+                    while (cmp->next && strcmp(file_path, (cmp->next)->path_and_name) > 0) {
+                        cmp = cmp->next;
+                    }
+                    if (!cmp->next) {
+                        if (add_entry_to_tail(list, newel)) {
+                            printf("Error during add entry to tail \n");
+                            return -1;
+                        }
+                        else{
+                            return 0;
+                        }
                     }
                     else {
-                        newel->next = cmp->next;
-                        newel->prev = cmp;
-                        (cmp->next)->prev = newel;
-                        cmp->next = newel;
+                        if (!strcmp(file_path, (cmp->next)->path_and_name)) {
+                            return 0;
+                        }
+                        else {
+                            newel->next = cmp->next;
+                            newel->prev = cmp;
+                            (cmp->next)->prev = newel;
+                            cmp->next = newel;
+                            return 0;
+                        }
                     }
                 }
             }
         }
+        return -1;
     }
 }
 
@@ -86,22 +93,24 @@ files_list_entry_t *add_file_entry(files_list_t *list, char *file_path) {
  * @return 0 in case of success, -1 else
  */
 int add_entry_to_tail(files_list_t *list, files_list_entry_t *entry) {
-    if(!list->head){
-        list->head=entry;
-        list->tail=entry;
-    }
-    else{
-        if(list->head==list->tail){
-            (list->head)->next=entry;
-            entry->prev=list->head;
-            list->tail=entry;
+    if(list) {
+        if (!list->head) {
+            list->head = entry;
+            list->tail = entry;
             return 0;
-        }
-        else{
-            entry->prev=list->tail;
-            (list->tail)->next=entry;
-            list->tail=entry;
-            return 0;
+        } else {
+            if (list->head == list->tail) {
+                (list->head)->next = entry;
+                entry->prev = list->head;
+                list->tail = entry;
+                return 0;
+            }
+            else {
+                entry->prev = list->tail;
+                (list->tail)->next = entry;
+                list->tail = entry;
+                return 0;
+            }
         }
     }
     return -1;
@@ -117,6 +126,18 @@ int add_entry_to_tail(files_list_t *list, files_list_entry_t *entry) {
  *  @return a pointer to the element found, NULL if none were found.
  */
 files_list_entry_t *find_entry_by_name(files_list_t *list, char *file_path, size_t start_of_src, size_t start_of_dest) {
+    if(list){
+        if(list->head){
+            files_list_entry_t *cmp =list->head;
+            while(cmp->next && cmp->path_and_name != file_path){
+                cmp = cmp->next;
+            }
+            if(cmp->path_and_name==file_path){
+                return cmp;
+            }
+        }
+    }
+    return NULL;
 }
 
 /*!

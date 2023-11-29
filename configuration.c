@@ -4,7 +4,6 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <string.h>
-typedef enum {DATE_SIZE_ONLY, NO_PARALLEL} param_type;
 /*!
  * @brief function display_help displays a brief manual for the program usage
  * @param my_name is the name of the binary file
@@ -70,6 +69,8 @@ int set_configuration(configuration_t *the_config, int argc, char *argv[]) {
                     parameter_count+=2;
                     break;
                 }
+                break;
+            default:
                 break;
         }
     }
