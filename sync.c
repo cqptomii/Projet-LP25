@@ -68,7 +68,17 @@ void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t
  * @param target is the target dir whose content must be listed
  */
 void make_list(files_list_t *list, char *target) {
-}
+    DIR *target_dir=NULL;
+    if((target_dir=open_dir(target))!=NULL){ // Check target type ( Dir / Regular file )
+        struct dirent *dir_entry;
+        while ((dir_entry=get_next_entry(target_dir))!=NULL){
+            make_list(list,dir_entry->d_name);
+        }
+    }
+    else{
+        add_file_entry(list,target);
+    }
+} 
 
 /*!
  * @brief open_dir opens a dir
@@ -93,13 +103,16 @@ DIR *open_dir(char *path) {
  * @return a struct dirent pointer to the next relevant entry, NULL if none found (use it to stop iterating)
  * Relevant entries are all regular files and dir, except . and ..
  */
-struct dirent *get_next_entry(DIR *dir) {
+struct dirent *get_next_entry(DIR *dir)  {
     struct dirent *next_entry;
     next_entry= readdir(dir);
     if(!next_entry){
         return NULL;
     }
     else{
-        return next_entry;
+        if(S_ISDIR(next_entry->d_type) || S_ISREG(next_entry->d_type)){
+            return next_entry;
+        }
+        return NULL;
     }
 }

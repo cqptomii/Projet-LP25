@@ -27,7 +27,7 @@
  * @return -1 in case of error, 0 else
  */
 int get_file_stats(files_list_entry_t *entry) {
-    struct stat *buf;
+    struct stat *buf = NULL;
     if(stat(entry->path_and_name,buf)){
        return -1;
     }
