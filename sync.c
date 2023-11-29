@@ -10,7 +10,7 @@
 #include <sys/sendfile.h>
 #include <unistd.h>
 #include <sys/msg.h>
-
+#include <errno.h>
 #include <stdio.h>
 
 /*!
@@ -76,6 +76,15 @@ void make_list(files_list_t *list, char *target) {
  * @return a pointer to a dir, NULL if it cannot be opened
  */
 DIR *open_dir(char *path) {
+    DIR *directories=NULL;
+    directories= opendir(path);
+    if(!directories){
+        perror(strerror(errno));
+        return NULL;
+    }
+    else{
+        return directories;
+    }
 }
 
 /*!
@@ -85,4 +94,12 @@ DIR *open_dir(char *path) {
  * Relevant entries are all regular files and dir, except . and ..
  */
 struct dirent *get_next_entry(DIR *dir) {
+    struct dirent *next_entry;
+    next_entry= readdir(dir);
+    if(!next_entry){
+        return NULL;
+    }
+    else{
+        return next_entry;
+    }
 }
