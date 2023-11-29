@@ -27,6 +27,26 @@
  * @return -1 in case of error, 0 else
  */
 int get_file_stats(files_list_entry_t *entry) {
+    struct stat *buf;
+    if(stat(entry->path_and_name,buf)){
+       return -1;
+    }
+    // if entry is File
+    if(S_ISREG(buf->st_mode)){
+        entry->entry_type=FICHIER;
+        entry->mode=buf->st_mode;
+        entry->mtime.tv_nsec= buf->st_mtime/100;
+        entry->size=buf->st_size;
+        compute_file_md5(entry);
+        return 0;
+    }
+    //if entry is Directories
+    if(S_ISDIR(buf->st_mode)){
+        entry->entry_type=DOSSIER;
+        entry->mode=buf->st_mode;
+        return 0;
+    }
+    return -1;
 }
 
 /*!
@@ -36,6 +56,7 @@ int get_file_stats(files_list_entry_t *entry) {
  * Use libcrypto functions from openssl/evp.h
  */
 int compute_file_md5(files_list_entry_t *entry) {
+
 }
 
 /*!
