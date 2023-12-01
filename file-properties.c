@@ -56,7 +56,35 @@ int get_file_stats(files_list_entry_t *entry) {
  * Use libcrypto functions from openssl/evp.h
  */
 int compute_file_md5(files_list_entry_t *entry) {
+	FILE *f = fopen(entry->path_and_name, "rb");
+	if (!f){
+		printf("Erreur dans l'ouverture du fichier");
+		return -1;
+	}
 
+	//INITIALISATION
+	EVP_MD_CTX *operations; //Structure représentant le contexte de hachage
+	EVP_MD *hachage; //Structure vers un algorithme de hachage
+	unsigned char md5_valeur[EVP_MAX_MD_SIZE]; //Création d'un tableau pouvant contenir au maximum 128 bits
+	operations = EVP_MD_CTX_new();
+	if(!operations){
+		printf("Erreur lors de la création du contexte MD5");
+	hachage = EVP_md5();
+	EVP_DigestInit_ex(operations,hachage,NULL);
+	
+	//HACHAGE
+	unsigned char buffer[4096];
+	size_t nb_octets;
+	while ((nb_octets = fread(buffer,1,sizeof(buffer),f)) >0){
+		EVP_DigestUpdate(operations,buffer,nb_octets);
+	}
+
+	//CALCUL FIN
+	EVP_DigestFinal_ex(operations, md5_valeur, NULL);
+	EVP_MD_CTX_free(operations);
+	fclose(f);
+	memcpy(entry->md5sum, md5_valeur, sizeof(entry->md5sum));
+	return 0;
 }
 
 /*!
