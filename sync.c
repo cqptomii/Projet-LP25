@@ -69,6 +69,7 @@ bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
  * @param target_path is the path whose files to list
  */
 void make_files_list(files_list_t *list, char *target_path) {
+    //JE M'EN OCCUPE -> Fabien
 }
 
 /*!
