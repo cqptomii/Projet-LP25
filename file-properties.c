@@ -93,6 +93,14 @@ int compute_file_md5(files_list_entry_t *entry) {
  * @return true if directory exists, false else
  */
 bool directory_exists(char *path_to_dir) {
+	DIR *directories = open_dir(path_to_dir);
+	if(directories){
+		closedir(directories);
+		return true;
+	}
+	else{
+		return false;
+	}
 }
 
 /*!
@@ -102,4 +110,17 @@ bool directory_exists(char *path_to_dir) {
  * Hint: try to open a file in write mode in the target directory.
  */
 bool is_directory_writable(char *path_to_dir) {
+	DIR *directories = open_dir(path_to_dir);
+	struct dirent *entry = get_next_entry(directories);
+	struct stat *buf = NULL;
+	FILE *f = fopen(entry->path_and_name, "w");
+	if(f){
+		fclose(f);
+		closedir(directories);
+		return true;
+	}
+	else{
+		closedir(directories);
+		return false;
+	}
 }
