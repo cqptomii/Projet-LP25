@@ -21,6 +21,36 @@
  * @param p_context is a pointer to the processes context
  */
 void synchronize(configuration_t *the_config, process_context_t *p_context) {
+    if(the_config->is_parallel){
+
+    }
+    else{
+        // Build source / destination list
+        files_list_t *source=NULL;
+        files_list_t *destination=NULL;
+        make_files_list(source,NULL);
+        make_files_list(destination,NULL);
+
+        // Build difference list
+        files_list_t *difference=NULL;
+
+        files_list_entry_t *cmp_source=source->head;
+        files_list_entry_t *cmp_destination=destination->head;
+        while(cmp_source->next){{
+            while(cmp_destination->next){
+                if(mismatch(cmp_source,cmp_destination,the_config->uses_md5)){
+                    add_entry_to_tail(difference,cmp_destination);
+                }
+            }
+        }
+
+        // Apply difference into destination
+        files_list_entry_t *cmp_difference=difference->head;
+        while(cmp_difference->next){
+            copy_entry_to_destination(difference->head,the_config);
+        }
+        }
+    }
 }
 
 /*!
@@ -78,7 +108,7 @@ void make_list(files_list_t *list, char *target) {
     else{
         add_file_entry(list,target);
     }
-} 
+}
 
 /*!
  * @brief open_dir opens a dir
