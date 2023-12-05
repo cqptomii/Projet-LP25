@@ -27,21 +27,21 @@ void clear_files_list(files_list_t *list) {
  *  @param file_path the full path (from the root of the considered tree) of the file
  *  @return 0 if success, -1 else (out of memory)
  */
-int add_file_entry(files_list_t *list, char *file_path) {
+files_list_t *add_file_entry(files_list_t *list, char *file_path) {
     files_list_entry_t *newel = (files_list_entry_t* ) malloc(sizeof(files_list_entry_t));
     strcpy(newel->path_and_name,file_path);
     newel->next=NULL;
     newel->prev=NULL;
     if(get_file_stats(newel)==-1){
         printf("Error during get_file_stats \n");
-        return -1;
+        return NULL;
     }
     else {
         if(list) {
             if (!list->head) {
                 if (add_entry_to_tail(list, newel)) {
                     printf("Error during add entry to tail \n");
-                    return -1;
+                    return NULL;
                 }
             }
             else {
@@ -49,7 +49,7 @@ int add_file_entry(files_list_t *list, char *file_path) {
                     list->head->prev=newel;
                     newel->next=list->head;
                     list->head = newel;
-                    return 0;
+                    return list;
                 }
                 else {
                     files_list_entry_t *cmp = list->head;
@@ -59,28 +59,28 @@ int add_file_entry(files_list_t *list, char *file_path) {
                     if (!cmp->next) {
                         if (add_entry_to_tail(list, newel)) {
                             printf("Error during add entry to tail \n");
-                            return -1;
+                            return NULL;
                         }
                         else{
-                            return 0;
+                            return list;
                         }
                     }
                     else {
                         if (!strcmp(file_path, (cmp->next)->path_and_name)) {
-                            return 0;
+                            return list;
                         }
                         else {
                             newel->next = cmp->next;
                             newel->prev = cmp;
                             (cmp->next)->prev = newel;
                             cmp->next = newel;
-                            return 0;
+                            return list;
                         }
                     }
                 }
             }
         }
-        return -1;
+        return NULL;
     }
 }
 

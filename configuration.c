@@ -15,6 +15,8 @@ void display_help(char *my_name) {
     printf("         \t-h display help (this text)\n");
     printf("         \t--date_size_only disables MD5 calculation for files\n");
     printf("         \t--no-parallel disables parallel computing (cancels values of option -n)\n");
+    printf("         \t--verbose enable mode verbose\n");
+    printf("         \t--dry-run enable mode dry run \n");
 }
 
 /*!
@@ -22,11 +24,13 @@ void display_help(char *my_name) {
  * @param the_config is a pointer to the configuration to be initialized
  */
 void init_configuration(configuration_t *the_config) {
-    configuration_t default_config={.source="",.destination="",.processes_count=0,.is_parallel=false,.uses_md5=false};
+    configuration_t default_config={.source="",.destination="",.processes_count=0,.is_parallel=false,.uses_md5=false,.verbose=false,.dry_run=false};
 
     the_config->uses_md5=default_config.uses_md5;
     the_config->is_parallel=default_config.is_parallel;
     the_config->processes_count=default_config.processes_count;
+    the_config->dry_run=default_config.dry_run;
+    the_config->verbose=default_config.verbose;
     strcpy(the_config->source,default_config.source);
     strcpy(the_config->destination,default_config.destination);
 }
@@ -46,6 +50,8 @@ int set_configuration(configuration_t *the_config, int argc, char *argv[]) {
     struct option my_opts[] = {
             {.name="date-size-only", .has_arg=0, .flag=0, .val='d'},
             {.name="no-parallel", .has_arg=0, .flag=0, .val='p'},
+            {.name="verbose", .has_arg=0, .flag=0, .val='v'},
+            {.name="dry-run", .has_arg=0, .flag=0, .val='r'},
             {.name=0, .has_arg=0, .flag=0, .val=0}, // last element must be zero
     };
     while ((opt = (getopt_long(argc, argv, "n::", my_opts, NULL))) != -1) {
@@ -69,6 +75,14 @@ int set_configuration(configuration_t *the_config, int argc, char *argv[]) {
                     parameter_count+=2;
                     break;
                 }
+                break;
+            case 'v':
+                the_config->verbose=true;
+                parameter_count++;
+                break;
+            case 'r':
+                the_config->dry_run=true;
+                parameter_count++;
                 break;
             default:
                 break;
