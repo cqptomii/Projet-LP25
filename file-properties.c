@@ -115,6 +115,9 @@ bool is_directory_writable(char *path_to_dir) {
 	while(entry->entry_type != FICHIER || entry->type == NULL) {
 		entry = get_next_entry(directories);
 	}
+	if(entry->type == NULL) {
+		return false;
+	}
 	struct stat *buf = NULL;
 	FILE *f = fopen(entry->path_and_name, "w");
 	if(f){
@@ -127,3 +130,4 @@ bool is_directory_writable(char *path_to_dir) {
 		return false;
 	}
 }
+
