@@ -61,6 +61,7 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
  * @return true if both files are not equal, false else
  */
 bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
+    //JE M'EN OCCUPE -> Fabien
 }
 
 /*!
