@@ -112,6 +112,9 @@ bool directory_exists(char *path_to_dir) {
 bool is_directory_writable(char *path_to_dir) {
 	DIR *directories = open_dir(path_to_dir);
 	struct dirent *entry = get_next_entry(directories);
+	while(entry->entry_type != FICHIER || entry->type == NULL) {
+		entry = get_next_entry(directories);
+	}
 	struct stat *buf = NULL;
 	FILE *f = fopen(entry->path_and_name, "w");
 	if(f){
