@@ -27,7 +27,7 @@ void clear_files_list(files_list_t *list) {
  *  @param file_path the full path (from the root of the considered tree) of the file
  *  @return 0 if success, -1 else (out of memory)
  */
-files_list_t *add_file_entry(files_list_t *list, char *file_path) {
+files_list_entry_t *add_file_entry(files_list_t *list, char *file_path) {
     files_list_entry_t *newel = (files_list_entry_t* ) malloc(sizeof(files_list_entry_t));
     strcpy(newel->path_and_name,file_path);
     newel->next=NULL;
@@ -49,7 +49,7 @@ files_list_t *add_file_entry(files_list_t *list, char *file_path) {
                     list->head->prev=newel;
                     newel->next=list->head;
                     list->head = newel;
-                    return list;
+                    return newel;
                 }
                 else {
                     files_list_entry_t *cmp = list->head;
@@ -62,19 +62,19 @@ files_list_t *add_file_entry(files_list_t *list, char *file_path) {
                             return NULL;
                         }
                         else{
-                            return list;
+                            return newel;
                         }
                     }
                     else {
                         if (!strcmp(file_path, (cmp->next)->path_and_name)) {
-                            return list;
+                            return newel;
                         }
                         else {
                             newel->next = cmp->next;
                             newel->prev = cmp;
                             (cmp->next)->prev = newel;
                             cmp->next = newel;
-                            return list;
+                            return newel;
                         }
                     }
                 }

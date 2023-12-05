@@ -48,6 +48,9 @@ void analyzer_process_loop(void *parameters) {
  * @param p_context is a pointer to the processes context
  */
 void clean_processes(configuration_t *the_config, process_context_t *p_context) {
+    if(the_config->is_parallel){
+
+    }
     // Do nothing if not parallel
     // Send terminate
     // Wait for responses

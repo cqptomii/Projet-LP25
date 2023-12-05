@@ -1,5 +1,5 @@
 #include <file-properties.h>
-
+#include <sync.h>
 #include <sys/stat.h>
 #include <dirent.h>
 #include <openssl/evp.h>
@@ -27,23 +27,23 @@
  * @return -1 in case of error, 0 else
  */
 int get_file_stats(files_list_entry_t *entry) {
-    struct stat *buf = NULL;
-    if(stat(entry->path_and_name,buf)){
+    struct stat buf;
+    if(stat(entry->path_and_name,&buf)){
        return -1;
     }
     // if entry is File
-    if(S_ISREG(buf->st_mode)){
+    if(S_ISREG(buf.st_mode)){
         entry->entry_type=FICHIER;
-        entry->mode=buf->st_mode;
-        entry->mtime.tv_nsec= buf->st_mtime/100;
-        entry->size=buf->st_size;
+        entry->mode=buf.st_mode;
+        entry->mtime.tv_nsec= buf.st_mtime/100;
+        entry->size=buf.st_size;
         compute_file_md5(entry);
         return 0;
     }
     //if entry is Directories
-    if(S_ISDIR(buf->st_mode)){
+    if(S_ISDIR(buf.st_mode)){
         entry->entry_type=DOSSIER;
-        entry->mode=buf->st_mode;
+        entry->mode=buf.st_mode;
         return 0;
     }
     return -1;
@@ -56,35 +56,37 @@ int get_file_stats(files_list_entry_t *entry) {
  * Use libcrypto functions from openssl/evp.h
  */
 int compute_file_md5(files_list_entry_t *entry) {
-	FILE *f = fopen(entry->path_and_name, "rb");
-	if (!f){
-		printf("Erreur dans l'ouverture du fichier");
-		return -1;
-	}
+    FILE *f = fopen(entry->path_and_name, "rb");
+    if (!f) {
+        printf("Erreur dans l'ouverture du fichier");
+        return -1;
+    }
 
-	//INITIALISATION
-	EVP_MD_CTX *operations; //Structure représentant le contexte de hachage
-	EVP_MD *hachage; //Structure vers un algorithme de hachage
-	unsigned char md5_valeur[EVP_MAX_MD_SIZE]; //Création d'un tableau pouvant contenir au maximum 128 bits
-	operations = EVP_MD_CTX_new();
-	if(!operations){
-		printf("Erreur lors de la création du contexte MD5");
-	hachage = EVP_md5();
-	EVP_DigestInit_ex(operations,hachage,NULL);
-	
-	//HACHAGE
-	unsigned char buffer[4096];
-	size_t nb_octets;
-	while ((nb_octets = fread(buffer,1,sizeof(buffer),f)) >0){
-		EVP_DigestUpdate(operations,buffer,nb_octets);
-	}
+    //INITIALISATION
+    EVP_MD_CTX *operations; //Structure représentant le contexte de hachage
+    EVP_MD *hachage; //Structure vers un algorithme de hachage
+    unsigned char md5_valeur[EVP_MAX_MD_SIZE]; //Création d'un tableau pouvant contenir au maximum 128 bits
+    operations = EVP_MD_CTX_new();
+    if (!operations) {
+        printf("Erreur lors de la création du contexte MD5");
+        hachage = EVP_md5();
+        EVP_DigestInit_ex(operations, hachage, NULL);
 
-	//CALCUL FIN
-	EVP_DigestFinal_ex(operations, md5_valeur, NULL);
-	EVP_MD_CTX_free(operations);
-	fclose(f);
-	memcpy(entry->md5sum, md5_valeur, sizeof(entry->md5sum));
-	return 0;
+        //HACHAGE
+        unsigned char buffer[4096];
+        size_t nb_octets;
+        while ((nb_octets = fread(buffer, 1, sizeof(buffer), f)) > 0) {
+            EVP_DigestUpdate(operations, buffer, nb_octets);
+        }
+
+        //CALCUL FIN
+        EVP_DigestFinal_ex(operations, md5_valeur, NULL);
+        EVP_MD_CTX_free(operations);
+        fclose(f);
+        memcpy(entry->md5sum, md5_valeur, sizeof(entry->md5sum));
+        return 0;
+    }
+    return -1;
 }
 
 /*!
@@ -110,24 +112,34 @@ bool directory_exists(char *path_to_dir) {
  * Hint: try to open a file in write mode in the target directory.
  */
 bool is_directory_writable(char *path_to_dir) {
+    struct stat buf;
+    struct dirent *file_entry;
+    char chemin[PATH_SIZE];
 	DIR *directories = open_dir(path_to_dir);
-	struct dirent *entry = get_next_entry(directories);
-	while(entry->entry_type != FICHIER || entry->type == NULL) {
-		entry = get_next_entry(directories);
-	}
-	if(entry->type == NULL) {
-		return false;
-	}
-	struct stat *buf = NULL;
-	FILE *f = fopen(entry->path_and_name, "w");
-	if(f){
-		fclose(f);
-		closedir(directories);
-		return true;
-	}
-	else{
-		closedir(directories);
-		return false;
-	}
+    if(!directories) {
+        printf("Directory not writtable \n");
+        return false;
+    }
+    file_entry = get_next_entry(directories);
+    while( file_entry ) {
+        if(concat_path(chemin,path_to_dir,file_entry->d_name)) {
+            if (stat(chemin, &buf)) {
+                printf("Cannot get file stat \n");
+                return false;
+            }
+            if (S_ISREG(buf.st_mode)) {
+                FILE *open_file = fopen(chemin, "w");
+                if (open_file) {
+                    fclose(open_file);
+                    closedir(directories);
+                    return true;
+                }
+                printf("Cannot open the file");
+                closedir(directories);
+                return false;
+            }
+        }
+    }
+    return false;
 }
 
