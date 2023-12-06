@@ -112,34 +112,32 @@ bool directory_exists(char *path_to_dir) {
  * Hint: try to open a file in write mode in the target directory.
  */
 bool is_directory_writable(char *path_to_dir) {
-    struct stat buf;
     struct dirent *file_entry;
-    char chemin[PATH_SIZE];
+    char path_file[PATH_SIZE];
 	DIR *directories = open_dir(path_to_dir);
     if(!directories) {
         printf("Directory not writtable \n");
         return false;
     }
     file_entry = get_next_entry(directories);
-    while( file_entry ) {
-        if(concat_path(chemin,path_to_dir,file_entry->d_name)) {
-            if (stat(chemin, &buf)) {
-                printf("Cannot get file stat \n");
-                return false;
+    while(file_entry){
+        if(concat_path(path_file,path_to_dir,file_entry->d_name)){
+            if(file_entry->d_type==DT_DIR){
+                return is_directory_writable(path_file);
             }
-            if (S_ISREG(buf.st_mode)) {
-                FILE *open_file = fopen(chemin, "w");
+            if(file_entry->d_type==DT_REG) {
+                FILE *open_file = fopen(path_file, "w");
                 if (open_file) {
                     fclose(open_file);
-                    closedir(directories);
+                    closedir(directories ;
                     return true;
                 }
-                printf("Cannot open the file");
-                closedir(directories);
-                return false;
             }
         }
+        file_entry= get_next_entry(directories );
     }
+    printf("Cannot open the file");
+    closedir(directories);
     return false;
 }
 

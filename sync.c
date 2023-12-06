@@ -141,7 +141,7 @@ struct dirent *get_next_entry(DIR *dir)  {
         return NULL;
     }
     else{
-        if(S_ISDIR(next_entry->d_type) || S_ISREG(next_entry->d_type)){
+        if(next_entry->d_type==DT_REG || next_entry->d_type==DT_DIR){
             return next_entry;
         }
         return NULL;
