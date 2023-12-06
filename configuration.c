@@ -24,7 +24,7 @@ void display_help(char *my_name) {
  * @param the_config is a pointer to the configuration to be initialized
  */
 void init_configuration(configuration_t *the_config) {
-    configuration_t default_config={.source="",.destination="",.processes_count=0,.is_parallel=false,.uses_md5=false,.verbose=false,.dry_run=false};
+    configuration_t default_config={.source="",.destination="",.processes_count=1,.is_parallel=false,.uses_md5=false,.verbose=false,.dry_run=false};
 
     the_config->uses_md5=default_config.uses_md5;
     the_config->is_parallel=default_config.is_parallel;
@@ -54,7 +54,7 @@ int set_configuration(configuration_t *the_config, int argc, char *argv[]) {
             {.name="dry-run", .has_arg=0, .flag=0, .val='r'},
             {.name=0, .has_arg=0, .flag=0, .val=0}, // last element must be zero
     };
-    while ((opt = (getopt_long(argc, argv, "n::", my_opts, NULL))) != -1) {
+    while ((opt = (getopt_long(argc, argv, "n::h::", my_opts, NULL))) != -1) {
         switch (opt) {
             case 'd':
                 the_config->uses_md5=optarg;
@@ -62,6 +62,14 @@ int set_configuration(configuration_t *the_config, int argc, char *argv[]) {
                 break;
             case'p':
                 the_config->is_parallel=optarg;
+                parameter_count++;
+                break;
+                case 'v':
+                the_config->verbose=true;
+                parameter_count++;
+                break;
+            case 'r':
+                the_config->dry_run=true;
                 parameter_count++;
                 break;
             case 'n':
@@ -76,12 +84,8 @@ int set_configuration(configuration_t *the_config, int argc, char *argv[]) {
                     break;
                 }
                 break;
-            case 'v':
-                the_config->verbose=true;
-                parameter_count++;
-                break;
-            case 'r':
-                the_config->dry_run=true;
+            case 'h':
+                display_help(argv[0]);
                 parameter_count++;
                 break;
             default:
