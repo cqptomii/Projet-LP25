@@ -62,7 +62,28 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
  * @return true if both files are not equal, false else
  */
 bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
-    //JE M'EN OCCUPE -> Fabien
+    if (get_file_stats(lhd) == -1 || get_file_stats(rhd) == -1) {
+        printf("Erreur lors de l'obtention des informations sur les fichiers.");
+        return true;
+    }
+    if (lhd->size != rhd->size || memcmp(&lhd->mtime, &rhd->mtime, sizeof(struct(timespec)) != 0 || lhd->mode != rhd->mode){
+        return true;
+    }
+
+    if (has_md5) {
+        if (compute_file_md5(lhd) == -1 || compute_file_md5(rhd) == -1) {
+            fprintf(stderr, "Erreur lors du calcul des empreintes MD5 des fichiers.\n");
+            return true;
+        }
+        if (compute_file_md5(lhd) != 0 || compute_file_md5(rhd) !=0){
+            printf("Erreur lors de l'obtention de l'empreinte md5 des fichiers");
+            return true;
+        }
+        if (memcmp(lhd->md5sum, rhd->md5sum, sizeof(lhd->md5sum)) != 0) {
+            return true;  // Les empreintes MD5 sont différentes
+        }
+    }
+    return false;
 }
 
 /*!
