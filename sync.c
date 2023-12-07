@@ -1,10 +1,10 @@
-#include <sync.h>
+#include "sync.h"
 #include <dirent.h>
 #include <string.h>
 #include <processes.h>
 #include <utility.h>
 #include <messages.h>
-#include <file-properties.h>
+#include "file-properties.h"
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/sendfile.h>
@@ -12,6 +12,7 @@
 #include <sys/msg.h>
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 /*!
  * @brief synchronize is the main function for synchronization
@@ -26,13 +27,13 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
     }
     else{
         // Build source / destination list
-        files_list_t *source=NULL;
-        files_list_t *destination=NULL;
-        make_files_list(source,NULL);
-        make_files_list(destination,NULL);
+        files_list_t *source=(files_list_t *)malloc(sizeof(files_list_t));
+        files_list_t *destination=(files_list_t *)malloc(sizeof(files_list_t));
+        make_files_list(source,the_config->source);
+        make_files_list(destination,the_config->destination);
 
         // Build difference list
-        files_list_t *difference=NULL;
+        files_list_t *difference=(files_list_t *)malloc(sizeof(files_list_t));
 
         files_list_entry_t *cmp_source=source->head;
         files_list_entry_t *cmp_destination=destination->head;
@@ -70,6 +71,14 @@ bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
  * @param target_path is the path whose files to list
  */
 void make_files_list(files_list_t *list, char *target_path) {
+    make_list(list,target_path);
+    files_list_entry_t *cp=list->head;
+    while(cp->next){
+        if(cp->entry_type==DOSSIER){
+            make_list(list,cp->path_and_name);
+        }
+        cp=cp->next;
+    }
 }
 
 /*!
@@ -100,14 +109,23 @@ void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t
  */
 void make_list(files_list_t *list, char *target) {
     DIR *target_dir=NULL;
-    if((target_dir=open_dir(target))!=NULL){ // Check target type ( Dir / Regular file )
+    char path_file[PATH_SIZE];
+    if((target_dir=open_dir(target))!=NULL){ // Check file opening
         struct dirent *dir_entry;
-        while ((dir_entry=get_next_entry(target_dir))!=NULL){
-            make_list(list,dir_entry->d_name);
+        dir_entry= get_next_entry(target_dir);
+        if(target_dir){
+            concat_path(path_file, target, dir_entry->d_name);
+            if(dir_entry->d_type==DT_DIR) {
+                make_list(list, path_file);
+            }
+            else {
+                while(dir_entry) {
+                    concat_path(path_file, target, dir_entry->d_name);
+                    add_file_entry(list, path_file);
+                    dir_entry= get_next_entry(target_dir);
+                }
+            }
         }
-    }
-    else{
-        add_file_entry(list,target);
     }
 }
 
@@ -142,6 +160,9 @@ struct dirent *get_next_entry(DIR *dir)  {
     }
     else{
         if(next_entry->d_type==DT_REG || next_entry->d_type==DT_DIR){
+            if(strcmp(next_entry->d_name,".")==0 || strcmp(next_entry->d_name,"..")==0){
+                return NULL;
+            }
             return next_entry;
         }
         return NULL;

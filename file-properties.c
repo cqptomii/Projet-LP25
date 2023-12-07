@@ -1,12 +1,12 @@
-#include <file-properties.h>
-#include <sync.h>
+#include "file-properties.h"
+#include "sync.h"
 #include <sys/stat.h>
 #include <dirent.h>
 #include <openssl/evp.h>
 #include <unistd.h>
 #include <assert.h>
 #include <string.h>
-#include <defines.h>
+#include "defines.h"
 #include <fcntl.h>
 #include <stdio.h>
 #include <utility.h>
@@ -129,7 +129,7 @@ bool is_directory_writable(char *path_to_dir) {
                 FILE *open_file = fopen(path_file, "w");
                 if (open_file) {
                     fclose(open_file);
-                    closedir(directories ;
+                    closedir(directories);
                     return true;
                 }
             }
