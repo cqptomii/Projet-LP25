@@ -72,13 +72,6 @@ bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
  */
 void make_files_list(files_list_t *list, char *target_path) {
     make_list(list,target_path);
-    files_list_entry_t *cp=list->head;
-    while(cp->next){
-        if(cp->entry_type==DOSSIER){
-            make_list(list,cp->path_and_name);
-        }
-        cp=cp->next;
-    }
 }
 
 /*!
@@ -108,22 +101,21 @@ void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t
  * @param target is the target dir whose content must be listed
  */
 void make_list(files_list_t *list, char *target) {
-    DIR *target_dir=NULL;
+    DIR *target_dir = NULL;
     char path_file[PATH_SIZE];
     if((target_dir=open_dir(target))!=NULL){ // Check file opening
         struct dirent *dir_entry;
-        dir_entry= get_next_entry(target_dir);
         if(target_dir){
-            concat_path(path_file, target, dir_entry->d_name);
-            if(dir_entry->d_type==DT_DIR) {
-                make_list(list, path_file);
-            }
-            else {
-                while(dir_entry) {
-                    concat_path(path_file, target, dir_entry->d_name);
+            dir_entry = get_next_entry(target_dir);
+            while(dir_entry){
+                concat_path(path_file, target, dir_entry->d_name);
+                if(dir_entry->d_type!=DT_DIR){
                     add_file_entry(list, path_file);
-                    dir_entry= get_next_entry(target_dir);
                 }
+                else{
+                    make_list(list,path_file);
+                }
+                dir_entry = get_next_entry(target_dir);
             }
         }
     }

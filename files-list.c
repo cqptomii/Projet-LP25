@@ -53,7 +53,7 @@ files_list_entry_t *add_file_entry(files_list_t *list, char *file_path) {
                 }
                 else {
                     files_list_entry_t *cmp = list->head;
-                    while (cmp->next && strcmp(file_path, (cmp->next)->path_and_name) > 0) {
+                    while (cmp->next && (strcmp(file_path, (cmp->next)->path_and_name) > 0)) {
                         cmp = cmp->next;
                     }
                     if (!cmp->next) {
@@ -67,7 +67,7 @@ files_list_entry_t *add_file_entry(files_list_t *list, char *file_path) {
                     }
                     else {
                         if (!strcmp(file_path, (cmp->next)->path_and_name)) {
-                            return newel;
+                            return NULL;
                         }
                         else {
                             newel->next = cmp->next;
