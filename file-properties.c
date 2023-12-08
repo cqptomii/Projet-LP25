@@ -64,29 +64,35 @@ int compute_file_md5(files_list_entry_t *entry) {
 
     //INITIALISATION
     EVP_MD_CTX *operations; //Structure représentant le contexte de hachage
-    EVP_MD *hachage; //Structure vers un algorithme de hachage
+    const EVP_MD *hachage; //Structure vers un algorithme de hachage
+    unsigned char buffer[PATH_SIZE];
     unsigned char md5_valeur[EVP_MAX_MD_SIZE]; //Création d'un tableau pouvant contenir au maximum 128 bits
-    operations = EVP_MD_CTX_new();
-    if (!operations) {
-        printf("Erreur lors de la création du contexte MD5");
-        hachage = EVP_md5();
-        EVP_DigestInit_ex(operations, hachage, NULL);
-
-        //HACHAGE
-        unsigned char buffer[4096];
-        size_t nb_octets;
-        while ((nb_octets = fread(buffer, 1, sizeof(buffer), f)) > 0) {
-            EVP_DigestUpdate(operations, buffer, nb_octets);
-        }
-
-        //CALCUL FIN
-        EVP_DigestFinal_ex(operations, md5_valeur, NULL);
-        EVP_MD_CTX_free(operations);
-        fclose(f);
-        memcpy(entry->md5sum, md5_valeur, sizeof(entry->md5sum));
-        return 0;
+    unsigned int digest_len;
+    OpenSSL_add_all_digests();
+    hachage = EVP_get_digestbyname("md5");
+    if (!hachage){
+        printf("Unknown message digest\n");
+        return -1;
     }
-    return -1;
+    operations = EVP_MD_CTX_new();
+    if(!operations){
+        printf("Error creating context\n");
+        return -1;
+    }
+    EVP_DigestInit_ex(operations, hachage, NULL);
+    //HACHAGE
+    while (1){
+        int bytes = fread(buffer, 1, PATH_SIZE, f);
+        if (bytes <= 0) break;
+        EVP_DigestUpdate(operations, buffer, bytes);
+    }
+
+    //CALCUL FIN
+    EVP_DigestFinal_ex(operations, md5_valeur, &digest_len);
+    EVP_MD_CTX_free(operations);
+    fclose(f);
+    memcpy(entry->md5sum, md5_valeur, sizeof(entry->md5sum));
+    return 0;
 }
 
 /*!
