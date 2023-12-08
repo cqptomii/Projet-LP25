@@ -28,22 +28,22 @@
  */
 int get_file_stats(files_list_entry_t *entry) {
     struct stat buf;
-    if(stat(entry->path_and_name,&buf)){
+    if(stat(entry->path_and_name, &buf)){
        return -1;
     }
     // if entry is File
     if(S_ISREG(buf.st_mode)){
-        entry->entry_type=FICHIER;
-        entry->mode=buf.st_mode;
-        entry->mtime.tv_nsec= buf.st_mtime/100;
-        entry->size=buf.st_size;
+        entry->entry_type = FICHIER;
+        entry->mode = buf.st_mode;
+        entry->mtime.tv_nsec = buf.st_mtime/100;
+        entry->size = buf.st_size;
         compute_file_md5(entry);
         return 0;
     }
     //if entry is Directories
     if(S_ISDIR(buf.st_mode)){
-        entry->entry_type=DOSSIER;
-        entry->mode=buf.st_mode;
+        entry->entry_type = DOSSIER;
+        entry->mode = buf.st_mode;
         return 0;
     }
     return -1;
@@ -82,7 +82,7 @@ int compute_file_md5(files_list_entry_t *entry) {
     EVP_DigestInit_ex(operations, hachage, NULL);
     //HACHAGE
     while (1){
-        int bytes = fread(buffer, 1, PATH_SIZE, f);
+        int bytes = (int)fread(buffer, 1, PATH_SIZE, f);
         if (bytes <= 0) break;
         EVP_DigestUpdate(operations, buffer, bytes);
     }
@@ -128,10 +128,10 @@ bool is_directory_writable(char *path_to_dir) {
     file_entry = get_next_entry(directories);
     while(file_entry){
         if(concat_path(path_file,path_to_dir,file_entry->d_name)){
-            if(file_entry->d_type==DT_DIR){
+            if(file_entry->d_type == DT_DIR){
                 return is_directory_writable(path_file);
             }
-            if(file_entry->d_type==DT_REG) {
+            if(file_entry->d_type == DT_REG) {
                 FILE *open_file = fopen(path_file, "w");
                 if (open_file) {
                     fclose(open_file);
@@ -140,7 +140,7 @@ bool is_directory_writable(char *path_to_dir) {
                 }
             }
         }
-        file_entry= get_next_entry(directories );
+        file_entry = get_next_entry(directories );
     }
     printf("Cannot open the file");
     closedir(directories);

@@ -24,13 +24,13 @@ void display_help(char *my_name) {
  * @param the_config is a pointer to the configuration to be initialized
  */
 void init_configuration(configuration_t *the_config) {
-    configuration_t default_config={.source="",.destination="",.processes_count=1,.is_parallel=false,.uses_md5=false,.verbose=false,.dry_run=false};
+    configuration_t default_config = {.source="",.destination="",.processes_count=1,.is_parallel=false,.uses_md5=false,.verbose=false,.dry_run=false};
 
-    the_config->uses_md5=default_config.uses_md5;
-    the_config->is_parallel=default_config.is_parallel;
-    the_config->processes_count=default_config.processes_count;
-    the_config->dry_run=default_config.dry_run;
-    the_config->verbose=default_config.verbose;
+    the_config->uses_md5 = default_config.uses_md5;
+    the_config->is_parallel = default_config.is_parallel;
+    the_config->processes_count = default_config.processes_count;
+    the_config->dry_run = default_config.dry_run;
+    the_config->verbose = default_config.verbose;
     strcpy(the_config->source,default_config.source);
     strcpy(the_config->destination,default_config.destination);
 }
@@ -46,7 +46,7 @@ int set_configuration(configuration_t *the_config, int argc, char *argv[]) {
     // Copy source_dir and destination_dir in the_config
     // Check source_dir , destination_dir existence
 
-    int opt = 0,parameter_count=0;
+    int opt = 0,parameter_count = 0;
     struct option my_opts[] = {
             {.name="date-size-only", .has_arg=0, .flag=0, .val='d'},
             {.name="no-parallel", .has_arg=0, .flag=0, .val='p'},
@@ -58,44 +58,43 @@ int set_configuration(configuration_t *the_config, int argc, char *argv[]) {
         switch (opt) {
             case 'd':
                 the_config->uses_md5=optarg;
-                parameter_count++;
+                ++parameter_count;
                 break;
             case'p':
                 the_config->is_parallel=optarg;
-                parameter_count++;
+                ++parameter_count;
                 break;
                 case 'v':
                 the_config->verbose=true;
-                parameter_count++;
+                ++parameter_count;
                 break;
             case 'r':
                 the_config->dry_run=true;
-                parameter_count++;
+                ++parameter_count;
                 break;
             case 'n':
                 if(optarg){
-                    the_config->processes_count=(int) strtol(optarg,NULL,10);
-                    parameter_count++;
+                    the_config->processes_count = (int)strtol(optarg,NULL,10);
+                    ++parameter_count;
                     break;
                 }
                 if(optind != argc){
-                    the_config->processes_count=(int) strtol(argv[optind],NULL,10);
+                    the_config->processes_count = (int)strtol(argv[optind],NULL,10);
                     parameter_count+=2;
                     break;
                 }
                 break;
             case 'h':
                 display_help(argv[0]);
-                parameter_count++;
+                ++parameter_count;
                 break;
             default:
                 break;
         }
     }
-    if((argc-parameter_count)<2){
+    if((argc-parameter_count) < 2){
         return -1;
-    }
-    else {
+    }else {
         // Copy source_dir and destination_dir in the_config
         strcpy(the_config->source,argv[argc-1]);
         strcpy(the_config->destination,argv[argc-2]);

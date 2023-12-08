@@ -27,26 +27,26 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
     }
     else{
         // Build source / destination list
-        files_list_t *source=(files_list_t *)malloc(sizeof(files_list_t));
-        files_list_t *destination=(files_list_t *)malloc(sizeof(files_list_t));
+        files_list_t *source = (files_list_t *)malloc(sizeof(files_list_t));
+        files_list_t *destination = (files_list_t *)malloc(sizeof(files_list_t));
         make_files_list(source,the_config->source);
         make_files_list(destination,the_config->destination);
 
         // Build difference list
-        files_list_t *difference=(files_list_t *)malloc(sizeof(files_list_t));
+        files_list_t *difference = (files_list_t *)malloc(sizeof(files_list_t));
 
-        files_list_entry_t *cmp_source=source->head;
-        files_list_entry_t *cmp_destination=destination->head;
+        files_list_entry_t *cmp_source = source->head;
+        files_list_entry_t *cmp_destination = destination->head;
         while(cmp_source->next){{
             while(cmp_destination->next){
                 if(mismatch(cmp_source,cmp_destination,the_config->uses_md5)){
-                    add_entry_to_tail(difference,cmp_destination);
+                    add_file_entry(difference,cmp_destination->path_and_name);
                 }
             }
         }
 
         // Apply difference into destination
-        files_list_entry_t *cmp_difference=difference->head;
+        files_list_entry_t *cmp_difference = difference->head;
         while(cmp_difference->next){
             copy_entry_to_destination(difference->head,the_config);
         }
@@ -66,10 +66,9 @@ bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
         printf("Erreur lors de l'obtention des informations sur les fichiers.");
         return true;
     }
-    if (memcmp(&lhd->path_and_name, &rhd->path_and_name, sizeof(char)*PATH_SIZE )){
+    if (memcmp(&lhd->path_and_name, &rhd->path_and_name, sizeof(char)*PATH_SIZE )!=0){
         return true;
     }
-
     if (has_md5) {
         if (compute_file_md5(lhd) == -1 || compute_file_md5(rhd) == -1) {
             fprintf(stderr, "Erreur lors du calcul des empreintes MD5 des fichiers.\n");
@@ -125,15 +124,15 @@ void make_list(files_list_t *list, char *target) {
     DIR *target_dir;
     struct dirent *dir_entry;
     char path_file[PATH_SIZE];
-    if(!(target_dir=open_dir(target))){// Check file opening
+    if(!(target_dir = open_dir(target))){// Check file opening
         return;
     }
-    while((dir_entry=get_next_entry(target_dir))!=NULL){
+    while((dir_entry=get_next_entry(target_dir)) != NULL){
         concat_path(path_file, target, dir_entry->d_name);
-        if(dir_entry->d_type==DT_REG){
+        if(dir_entry->d_type == DT_REG){
             add_file_entry(list, path_file);
         }
-        if(dir_entry->d_type==DT_DIR){
+        if(dir_entry->d_type == DT_DIR){
             make_list(list,path_file);
         }
     }
@@ -146,8 +145,8 @@ void make_list(files_list_t *list, char *target) {
  * @return a pointer to a dir, NULL if it cannot be opened
  */
 DIR *open_dir(char *path) {
-    DIR *directories=NULL;
-    directories= opendir(path);
+    DIR *directories = NULL;
+    directories = opendir(path);
     if(!directories){
         perror(strerror(errno));
         return NULL;
@@ -165,13 +164,13 @@ DIR *open_dir(char *path) {
  */
 struct dirent *get_next_entry(DIR *dir)  {
     struct dirent *next_entry;
-    next_entry= readdir(dir);
+    next_entry = readdir(dir);
     if(!next_entry){
         return NULL;
     }
     else{
-        if(next_entry->d_type==DT_REG || next_entry->d_type==DT_DIR){
-            if(strcmp(next_entry->d_name,".")==0 || strcmp(next_entry->d_name,"..")==0){
+        if(next_entry->d_type == DT_REG || next_entry->d_type == DT_DIR){
+            if(strcmp(next_entry->d_name, ".") == 0 || strcmp(next_entry->d_name, "..") == 0){
                 return NULL;
             }
             return next_entry;

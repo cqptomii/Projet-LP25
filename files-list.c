@@ -28,31 +28,29 @@ void clear_files_list(files_list_t *list) {
  *  @return 0 if success, -1 else (out of memory)
  */
 files_list_entry_t *add_file_entry(files_list_t *list, char *file_path) {
-    files_list_entry_t *newel = (files_list_entry_t* ) malloc(sizeof(files_list_entry_t));
+    files_list_entry_t *newel = (files_list_entry_t* )malloc(sizeof(files_list_entry_t));
     strcpy(newel->path_and_name,file_path);
-    newel->next=NULL;
-    newel->prev=NULL;
-    if(get_file_stats(newel)==-1){
+    newel->next = NULL;
+    newel->prev = NULL;
+    if(get_file_stats(newel) == -1){
         printf("Error during get_file_stats \n");
         return NULL;
-    }
-    else {
+    }else {
         if(list) {
             if (!list->head) {
                 add_entry_to_tail(list, newel);
                 return list->head;
-            }
-            else {
+            }else {
                 files_list_entry_t *cmp = list->head;
                 int verif_length;
                 while(1){
-                    verif_length=strlen(cmp->path_and_name)-strlen(file_path);
-                    if(verif_length>0){
+                    verif_length = (int)(strlen(cmp->path_and_name)-strlen(file_path));
+                    if(verif_length > 0){
                         break;
                     }
-                    if(verif_length==0){
-                        verif_length= strcmp(cmp->path_and_name,file_path);
-                        if(verif_length>0 || verif_length==0){
+                    if(verif_length == 0){
+                        verif_length = strcmp(cmp->path_and_name,file_path);
+                        if(verif_length > 0 || verif_length == 0){
                             break;
                         }
                     }
@@ -61,14 +59,14 @@ files_list_entry_t *add_file_entry(files_list_t *list, char *file_path) {
                     }
                     cmp=cmp->next;
                 }
-                if(verif_length==0){
+                if(verif_length == 0){
                     return NULL;
                 }else{
-                    if(verif_length>0) {
-                        if(cmp==list->head){
-                            newel->next=cmp;
-                            cmp->prev=newel;
-                            list->head=newel;
+                    if(verif_length > 0) {
+                        if(cmp == list->head){
+                            newel->next = cmp;
+                            cmp->prev = newel;
+                            list->head = newel;
                         }else {
                             newel->next = cmp;
                             newel->prev = cmp->prev;
@@ -102,14 +100,13 @@ int add_entry_to_tail(files_list_t *list, files_list_entry_t *entry) {
             list->head = entry;
             list->tail = entry;
             return 0;
-        } else {
+        }else {
             if (list->head == list->tail) {
                 (list->head)->next = entry;
                 entry->prev = list->head;
                 list->tail = entry;
                 return 0;
-            }
-            else {
+            }else {
                 entry->prev = list->tail;
                 (list->tail)->next = entry;
                 list->tail = entry;
@@ -132,11 +129,11 @@ int add_entry_to_tail(files_list_t *list, files_list_entry_t *entry) {
 files_list_entry_t *find_entry_by_name(files_list_t *list, char *file_path, size_t start_of_src, size_t start_of_dest) {
     if(list){
         if(list->head){
-            files_list_entry_t *cmp =list->head;
+            files_list_entry_t *cmp = list->head;
             while(cmp->next && cmp->path_and_name != file_path){
                 cmp = cmp->next;
             }
-            if(cmp->path_and_name==file_path){
+            if(cmp->path_and_name == file_path){
                 return cmp;
             }
         }
@@ -153,7 +150,7 @@ void display_files_list(files_list_t *list) {
     if (!list)
         return;
     
-    for (files_list_entry_t *cursor=list->head; cursor!=NULL; cursor=cursor->next) {
+    for (files_list_entry_t *cursor=list->head; cursor != NULL; cursor=cursor->next) {
         printf("%s\n", cursor->path_and_name);
     }
 }
