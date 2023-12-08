@@ -66,7 +66,7 @@ bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
         printf("Erreur lors de l'obtention des informations sur les fichiers.");
         return true;
     }
-    if (lhd->size != rhd->size || memcmp(&lhd->mtime, &rhd->mtime, sizeof(struct(timespec)) != 0 || lhd->mode != rhd->mode){
+    if (memcmp(&lhd->path_and_name, &rhd->path_and_name, sizeof(char)*PATH_SIZE )){
         return true;
     }
 

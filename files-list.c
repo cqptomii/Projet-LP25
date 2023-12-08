@@ -39,44 +39,48 @@ files_list_entry_t *add_file_entry(files_list_t *list, char *file_path) {
     else {
         if(list) {
             if (!list->head) {
-                if (add_entry_to_tail(list, newel)) {
-                    printf("Error during add entry to tail \n");
-                    return NULL;
-                }
+                add_entry_to_tail(list, newel);
+                return list->head;
             }
             else {
-                if (strcmp(file_path, (list->head)->path_and_name) < 0) {
-                    list->head->prev=newel;
-                    newel->next=list->head;
-                    list->head = newel;
-                    return newel;
+                files_list_entry_t *cmp = list->head;
+                int verif_length;
+                while(1){
+                    verif_length=strlen(cmp->path_and_name)-strlen(file_path);
+                    if(verif_length>0){
+                        break;
+                    }
+                    if(verif_length==0){
+                        verif_length= strcmp(cmp->path_and_name,file_path);
+                        if(verif_length>0 || verif_length==0){
+                            break;
+                        }
+                    }
+                    if(!cmp->next){
+                        break;
+                    }
+                    cmp=cmp->next;
                 }
-                else {
-                    files_list_entry_t *cmp = list->head;
-                    while (cmp->next && (strcmp(file_path, (cmp->next)->path_and_name) > 0)) {
-                        cmp = cmp->next;
+                if(verif_length==0){
+                    return NULL;
+                }else{
+                    if(verif_length>0) {
+                        if(cmp==list->head){
+                            newel->next=cmp;
+                            cmp->prev=newel;
+                            list->head=newel;
+                        }else {
+                            newel->next = cmp;
+                            newel->prev = cmp->prev;
+                            (cmp->prev)->next = newel;
+                            cmp->prev = newel;
+                        }
+                        return list->head;
                     }
-                    if (!cmp->next) {
-                        if (add_entry_to_tail(list, newel)) {
-                            printf("Error during add entry to tail \n");
-                            return NULL;
-                        }
-                        else{
-                            return newel;
-                        }
-                    }
-                    else {
-                        if (!strcmp(file_path, (cmp->next)->path_and_name)) {
-                            return NULL;
-                        }
-                        else {
-                            newel->next = cmp->next;
-                            newel->prev = cmp;
-                            (cmp->next)->prev = newel;
-                            cmp->next = newel;
-                            return newel;
-                        }
-                    }
+                }
+                if(!cmp->next){
+                    add_entry_to_tail(list,newel);
+                    return list->tail;
                 }
             }
         }
