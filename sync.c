@@ -14,6 +14,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+
+
 /*!
  * @brief synchronize is the main function for synchronization
  * It will build the lists (source and destination), then make a third list with differences, and apply differences to the destination
@@ -117,6 +119,35 @@ void make_files_lists_parallel(files_list_t *src_list, files_list_t *dst_list, c
  * Use sendfile to copy the file, mkdir to create the directory
  */
 void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t *the_config) {
+    if (S_ISREG(source_entry->mode)) {
+        char destination_path[4096];
+        destination_path = concat_path(*destination_path, *the_config->destination, *source_entry->path_and_name);
+        int source_fd = open(source_entry->path_and_name, O_RDONLY);
+        if (source_fd == -1) {
+            perror("Error opening source file");
+            return;
+        }
+        int destination_fd = open(destination_path, O_WRONLY | O_CREAT | O_TRUNC, source_entry->mode);
+        if (destination_fd == -1) {
+            perror("Error opening destination file");
+            close(source_fd);
+            return;
+        }
+        off_t offset = 0;
+        ssize_t bytes_copied = sendfile(destination_fd, source_fd, &offset, source_entry->size);
+        if (bytes_copied == -1) {
+            perror("Error copying file contents");
+        }
+        close(source_fd);
+        close(destination_fd);
+        utimensat(AT_FDCWD, destination_path, &(struct timespec[]){source_entry->mtime, source_entry->mtime}, 0);
+    } else if (S_ISDIR(source_entry->mode)) {
+        char destination_path[4096];
+        destination_path = concat_path(*destination_path, *the_config->destination, *source_entry->path_and_name);
+        if (mkdir(destination_path, source_entry->mode) == -1) {
+            perror("Error creating destination directory");
+        }
+    }
 }
 
 /*!
