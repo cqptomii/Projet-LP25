@@ -132,13 +132,16 @@ files_list_entry_t *find_entry_by_name(files_list_t *list, char *file_path, size
     }
     if(list->head) {
         files_list_entry_t *cmp = list->head;
+        size_t path_len = strlen(file_path) - start_of_dest;
         while (cmp->next) {
-            if(strncmp(cmp->path_and_name+start_of_src,file_path+start_of_dest, strlen(cmp->path_and_name+start_of_src))==0){
+            size_t cmp_len = strlen(cmp->path_and_name) - start_of_src;
+            if (cmp_len >= path_len && strncmp(cmp->path_and_name+start_of_src,file_path+start_of_dest, path_len)==0){
                 return cmp;
             }
             cmp = cmp->next;
         }
-        if(strncmp(cmp->path_and_name+start_of_src,file_path+start_of_dest, strlen(cmp->path_and_name+start_of_src))==0){
+        size_t cmp_len = strlen(cmp->path_and_name) - start_of_src;
+        if(cmp_len >= path_len && (strncmp(cmp->path_and_name + start_of_src, file_path + start_of_dest, path_len)==0)){
             return cmp;
         }
     }
