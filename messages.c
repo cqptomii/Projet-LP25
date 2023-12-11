@@ -4,7 +4,30 @@
 
 // Functions in this file are required for inter processes communication
 
+/*!
+ * @brief send_file_entry sends a file entry, with a given command code
+ * @param msg_queue the MQ identifier through which to send the entry
+ * @param recipient is the id of the recipient (as specified by mtype)
+ * @param file_entry is a pointer to the entry to send (must be copied)
+ * @param cmd_code is the cmd code to process the entry.
+ * @return the result of the msgsnd function
+ * Used by the specialized functions send_analyze*
+ */
+int send_file_entry(int msg_queue, int recipient, files_list_entry_t *file_entry, int cmd_code) {
+    int status;
+    struct analyze_file_message message;
 
+    //Définit le type du message
+    message.mtype = recipient;
+    message.cmd_code = cmd_code;
+  
+    //Copie de file_entry
+    memcpy(&message.file_entry, file_entry, sizeof(files_list_entry_t));
+  
+    //Envoie le message avec msgsnd
+    status = msgsnd(msg_queue, &message, sizeof(struct analyze_file_message) - sizeof(long), 0);
+    return status;
+}
 
 /*!
  * @brief send_analyze_dir_command sends a command to analyze a directory
