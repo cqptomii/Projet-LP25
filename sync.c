@@ -119,9 +119,9 @@ void make_files_lists_parallel(files_list_t *src_list, files_list_t *dst_list, c
  * Use sendfile to copy the file, mkdir to create the directory
  */
 void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t *the_config) {
+    char destination_path[PATH_SIZE];
     if (S_ISREG(source_entry->mode)) {
-        char destination_path[4096];
-        destination_path = concat_path(*destination_path, *the_config->destination, *source_entry->path_and_name);
+        concat_path(destination_path, the_config->destination, source_entry->path_and_name);
         int source_fd = open(source_entry->path_and_name, O_RDONLY);
         if (source_fd == -1) {
             perror("Error opening source file");
@@ -140,10 +140,10 @@ void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t
         }
         close(source_fd);
         close(destination_fd);
+        // Keeping aess modes and mtime
         utimensat(AT_FDCWD, destination_path, &(struct timespec[]){source_entry->mtime, source_entry->mtime}, 0);
     } else if (S_ISDIR(source_entry->mode)) {
-        char destination_path[4096];
-        destination_path = concat_path(*destination_path, *the_config->destination, *source_entry->path_and_name);
+        concat_path(destination_path, the_config->destination, source_entry->path_and_name);
         if (mkdir(destination_path, source_entry->mode) == -1) {
             perror("Error creating destination directory");
         }

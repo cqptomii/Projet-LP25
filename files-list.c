@@ -127,15 +127,19 @@ int add_entry_to_tail(files_list_t *list, files_list_entry_t *entry) {
  *  @return a pointer to the element found, NULL if none were found.
  */
 files_list_entry_t *find_entry_by_name(files_list_t *list, char *file_path, size_t start_of_src, size_t start_of_dest) {
-    if(list){
-        if(list->head){
-            files_list_entry_t *cmp = list->head;
-            while(cmp->next && cmp->path_and_name != file_path){
-                cmp = cmp->next;
-            }
-            if(cmp->path_and_name == file_path){
+    if(!list || !file_path){
+        return NULL;
+    }
+    if(list->head) {
+        files_list_entry_t *cmp = list->head;
+        while (cmp->next) {
+            if(strncmp(cmp->path_and_name+start_of_src,file_path+start_of_dest, strlen(cmp->path_and_name+start_of_src))==0){
                 return cmp;
             }
+            cmp = cmp->next;
+        }
+        if(strncmp(cmp->path_and_name+start_of_src,file_path+start_of_dest, strlen(cmp->path_and_name+start_of_src))==0){
+            return cmp;
         }
     }
     return NULL;
