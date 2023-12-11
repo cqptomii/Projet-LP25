@@ -14,6 +14,19 @@
  * Used by the specialized functions send_analyze*
  */
 int send_file_entry(int msg_queue, int recipient, files_list_entry_t *file_entry, int cmd_code) {
+    int status;
+    struct analyze_file_message message;
+
+    //Définit le type du message
+    message.mtype = recipient;
+    message.cmd_code = cmd_code;
+  
+    //Copie de file_entry
+    memcpy(&message.file_entry, file_entry, sizeof(files_list_entry_t));
+  
+    //Envoie le message avec msgsnd
+    status = msgsnd(msg_queue, &message, sizeof(struct analyze_file_message) - sizeof(long), 0);
+    return status;
 }
 
 /*!
