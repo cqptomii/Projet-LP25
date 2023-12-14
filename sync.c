@@ -70,8 +70,7 @@ bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
             return true;  // Les empreintes MD5 sont différentes
         }
     }
-
-    if (lhd->mtime == rhd->mtime){
+    if (difftime(lhd->mtime.tv_sec,rhd->mtime.tv_sec) == 0){
 
 	    if(lhd->size == rhd->size){
 
@@ -86,13 +85,6 @@ bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
 	    }
     }
 	return true;
-}
-
-        if (memcmp(lhd->md5sum, rhd->md5sum, sizeof(lhd->md5sum)) != 0) {
-            return true;  // Les empreintes MD5 sont différentes
-        }
-    }
-    return false;
 }
 
 /*!
