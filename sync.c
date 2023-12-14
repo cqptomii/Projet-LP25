@@ -85,14 +85,7 @@ bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
 		    }
 	    }
     }
-	return true;
-}
-
-        if (memcmp(lhd->md5sum, rhd->md5sum, sizeof(lhd->md5sum)) != 0) {
-            return true;  // Les empreintes MD5 sont différentes
-        }
-    }
-    return false;
+    return true;
 }
 
 /*!
