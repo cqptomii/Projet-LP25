@@ -84,7 +84,7 @@ bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
 		    }
 	    }
     }
-	return true;
+    return true;
 }
 
 /*!
