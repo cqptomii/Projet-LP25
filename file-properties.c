@@ -118,29 +118,24 @@ bool directory_exists(char *path_to_dir) {
  * Hint: try to open a file in write mode in the target directory.
  */
 bool is_directory_writable(char *path_to_dir) {
-    struct dirent *file_entry;
     char path_file[PATH_SIZE];
 	DIR *directories = open_dir(path_to_dir);
     if(!directories) {
         printf("Directory not writtable \n");
         return false;
     }
-    file_entry = get_next_entry(directories);
-    while(file_entry){
-        if(concat_path(path_file,path_to_dir,file_entry->d_name)){
-            if(file_entry->d_type == DT_DIR){
-                return is_directory_writable(path_file);
-            }
-            if(file_entry->d_type == DT_REG) {
-                FILE *open_file = fopen(path_file, "w");
-                if (open_file) {
-                    fclose(open_file);
-                    closedir(directories);
-                    return true;
-                }
-            }
+    if (concat_path(path_file, path_to_dir, "/text.txt")) {
+        FILE *verif_writtable = fopen(path_file, "w");
+        if (!verif_writtable) {
+            printf("Directory is not writtable \n");
+            fclose(verif_writtable);
+            closedir(directories);
+            return false;
         }
-        file_entry = get_next_entry(directories );
+        closedir(directories);
+        fclose(verif_writtable);
+        remove(path_file);
+        return true;
     }
     printf("Cannot open the file");
     closedir(directories);
