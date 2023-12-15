@@ -43,13 +43,16 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
         make_files_list(source,the_config->source);
         make_files_list(destination,the_config->destination);
 
-
         files_list_entry_t *cmp_source = source->head;
-        files_list_entry_t *cmp_destination = destination->head;
+        files_list_entry_t *cmp_destination;
         while(cmp_source){
-            while(cmp_destination){
-                if(mismatch(cmp_source,cmp_destination,the_config->uses_md5)){
+            cmp_destination=destination->head;
+            while(cmp_destination) {
+                if(!find_entry_by_name(destination,cmp_source->path_and_name,0,0)){
                     add_file_entry(difference,cmp_source->path_and_name);
+                }
+                if (mismatch(cmp_source, cmp_destination, the_config->uses_md5)) {
+                    add_file_entry(difference, cmp_source->path_and_name);
                 }
                 cmp_destination=cmp_destination->next;
             }
