@@ -65,8 +65,9 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
         }
         // Apply difference into destination
         files_list_entry_t *cmp_difference = difference->head;
-        while(cmp_difference->next){
-            copy_entry_to_destination(difference->head,the_config);
+        while(cmp_difference){
+            copy_entry_to_destination(cmp_difference,the_config);
+            cmp_difference=cmp_difference->next;
         }
     }
     return;
@@ -124,31 +125,48 @@ void make_files_lists_parallel(files_list_t *src_list, files_list_t *dst_list, c
  * Use sendfile to copy the file, mkdir to create the directory
  */
 void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t *the_config) {
-    char destination_path[PATH_SIZE];
+    char file_created_path[PATH_SIZE];
     //delete prefix from file_list_entry
     if (S_ISREG(source_entry->mode)) {
-        concat_path(destination_path, the_config->destination, source_entry->path_and_name);
+        concat_path(file_created_path, the_config->destination, source_entry->path_and_name+strlen(the_config->source)+1);
         int source_fd = open(source_entry->path_and_name, O_RDONLY);
         if (source_fd == -1) {
-            perror("Error opening source file");
+            perror("Error during source file opening \n");
             return;
         }
-        int destination_fd = open(destination_path, O_WRONLY | O_CREAT | O_TRUNC, source_entry->mode);
+        //Create intermediate folders
+        char *sep="/";
+        char *token = strtok(source_entry->path_and_name+strlen(the_config->source)+1,sep);
+        char dir_path[256] = "";
+        strcat(dir_path,the_config->destination);
+        while(strcmp(dir_path,file_created_path) != 0){
+            strcat(dir_path,sep);
+            strcat(dir_path,token);
+            if(strcmp(dir_path,file_created_path)!=0) {
+                if(mkdir(dir_path,0777) != 0) {
+                    perror("Canno't open the path \n");
+                    return;
+                }
+            }
+            token = strtok(NULL,sep);
+        }
+        int destination_fd = open(file_created_path, O_WRONLY | O_CREAT | O_TRUNC, source_entry->mode);
         if (destination_fd == -1) {
-            perror("Error opening destination file");
-            close(source_fd);
+            perror("Error during destination file opening \n");
             return;
         }
+
         off_t offset = 0;
         ssize_t bytes_copied = sendfile(destination_fd, source_fd, &offset, source_entry->size);
         if (bytes_copied == -1) {
             perror("Error copying file contents");
+            return;
         }
         close(source_fd);
         close(destination_fd);
         // Keeping access modes and mtime
         struct timespec mtime[2] = {source_entry->mtime, source_entry->mtime};
-        if (utimensat(AT_FDCWD, destination_path, mtime, 0) == -1) {
+        if (utimensat(AT_FDCWD, file_created_path, mtime, 0) == -1) {
             perror("Error setting acces modes and mtime");
             return;
         }
