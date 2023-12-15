@@ -24,20 +24,20 @@
  * @param p_context is a pointer to the processes context
  */
 void synchronize(configuration_t *the_config, process_context_t *p_context) {
-    if(the_config->is_parallel){
+    if (the_config->is_parallel) {
 
     }
-    else{
+    else {
         // Init list
         files_list_t *source = (files_list_t *)malloc(sizeof(files_list_t));
-        source->head=NULL;
-        source->tail=NULL;
+        source->head = NULL;
+        source->tail = NULL;
         files_list_t *destination = (files_list_t *)malloc(sizeof(files_list_t));
-        destination->head=NULL;
-        destination->tail=NULL;
+        destination->head = NULL;
+        destination->tail = NULL;
         files_list_t *difference = (files_list_t *)malloc(sizeof(files_list_t));
-        difference->head=NULL;
-        difference->tail=NULL;
+        difference->head = NULL;
+        difference->tail = NULL;
 
         //Build source / destination / difference
         make_files_list(source,the_config->source);
@@ -46,22 +46,22 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
 
         files_list_entry_t *cmp_source = source->head;
         files_list_entry_t *cmp_destination = destination->head;
-        while(cmp_source){
-            while(cmp_destination){
-                if(mismatch(cmp_source,cmp_destination,the_config->uses_md5)){
-                    add_file_entry(difference,cmp_source->path_and_name);
+        while (cmp_source) {
+            while (cmp_destination) {
+                if (mismatch(cmp_source, cmp_destination, the_config->uses_md5)) {
+                    add_file_entry(difference, cmp_source->path_and_name);
                 }
-                cmp_destination=cmp_destination->next;
+                cmp_destination = cmp_destination->next;
             }
-            cmp_source=cmp_source->next;
+            cmp_source = cmp_source->next;
         }
         printf("Difference \n");
         display_files_list(difference);
         /*
         // Apply difference into destination
         files_list_entry_t *cmp_difference = difference->head;
-        while(cmp_difference->next){
-            copy_entry_to_destination(difference->head,the_config);
+        while (cmp_difference->next) {
+            copy_entry_to_destination(difference->head, the_config);
         }
          */
     }
@@ -81,10 +81,10 @@ bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
           return true;  // Les empreintes MD5 sont différentes
       }
   }
-  if (difftime(lhd->mtime.tv_sec,rhd->mtime.tv_sec) == 0){
-      if(lhd->size == rhd->size){
-          if(lhd->entry_type == rhd->entry_type){
-              if(lhd->mode == rhd->mode){
+  if (difftime(lhd->mtime.tv_sec,rhd->mtime.tv_sec) == 0) {
+      if (lhd->size == rhd->size) {
+          if (lhd->entry_type == rhd->entry_type) {
+              if (lhd->mode == rhd->mode) {
                   return false;
               }
           }
@@ -161,15 +161,15 @@ void make_list(files_list_t *list, char *target) {
     DIR *target_dir;
     struct dirent *dir_entry;
     char path_file[PATH_SIZE];
-    if(!(target_dir = open_dir(target))){// Check file opening
+    if (!(target_dir = open_dir(target))) { // Check file opening
         return;
     }
-    while((dir_entry=get_next_entry(target_dir)) != NULL){
+    while ((dir_entry=get_next_entry(target_dir)) != NULL) {
         concat_path(path_file, target, dir_entry->d_name);
-        if(dir_entry->d_type == DT_REG){
+        if (dir_entry->d_type == DT_REG) {
             add_file_entry(list, path_file);
         }
-        if(dir_entry->d_type == DT_DIR){
+        if (dir_entry->d_type == DT_DIR) {
             make_list(list,path_file);
         }
     }
@@ -184,11 +184,11 @@ void make_list(files_list_t *list, char *target) {
 DIR *open_dir(char *path) {
     DIR *directories = NULL;
     directories = opendir(path);
-    if(!directories){
+    if (!directories) {
         perror(strerror(errno));
         return NULL;
     }
-    else{
+    else {
         return directories;
     }
 }
@@ -199,11 +199,11 @@ DIR *open_dir(char *path) {
  * @return a struct dirent pointer to the next relevant entry, NULL if none found (use it to stop iterating)
  * Relevant entries are all regular files and dir, except . and ..
  */
-struct dirent *get_next_entry(DIR *dir)  {
+struct dirent *get_next_entry(DIR *dir) {
     struct dirent *next_entry;
-    while((next_entry = readdir(dir))!=NULL){
-        if(next_entry->d_type == DT_REG || next_entry->d_type == DT_DIR){
-            if(strcmp(next_entry->d_name, ".") != 0 && strcmp(next_entry->d_name, "..") != 0){
+    while ((next_entry = readdir(dir)) != NULL) {
+        if (next_entry->d_type == DT_REG || next_entry->d_type == DT_DIR) {
+            if (strcmp(next_entry->d_name, ".") != 0 && strcmp(next_entry->d_name, "..") != 0) {
                 return next_entry;
             }
         }
