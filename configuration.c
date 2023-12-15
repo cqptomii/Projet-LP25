@@ -96,8 +96,8 @@ int set_configuration(configuration_t *the_config, int argc, char *argv[]) {
         return -1;
     }else {
         // Copy source_dir and destination_dir in the_config
-        strcpy(the_config->source,argv[argc-1]);
-        strcpy(the_config->destination,argv[argc-2]);
+        strcpy(the_config->source,argv[argc-2]);
+        strcpy(the_config->destination,argv[argc-1]);
         return 0;
     }
 }

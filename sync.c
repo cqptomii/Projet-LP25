@@ -28,32 +28,44 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
 
     }
     else{
-        // Build source / destination list
+        // Init list
         files_list_t *source = (files_list_t *)malloc(sizeof(files_list_t));
+        source->head=NULL;
+        source->tail=NULL;
         files_list_t *destination = (files_list_t *)malloc(sizeof(files_list_t));
+        destination->head=NULL;
+        destination->tail=NULL;
+        files_list_t *difference = (files_list_t *)malloc(sizeof(files_list_t));
+        difference->head=NULL;
+        difference->tail=NULL;
+
+        //Build source / destination / difference
         make_files_list(source,the_config->source);
         make_files_list(destination,the_config->destination);
 
-        // Build difference list
-        files_list_t *difference = (files_list_t *)malloc(sizeof(files_list_t));
 
         files_list_entry_t *cmp_source = source->head;
         files_list_entry_t *cmp_destination = destination->head;
-        while(cmp_source->next){{
-            while(cmp_destination->next){
+        while(cmp_source){
+            while(cmp_destination){
                 if(mismatch(cmp_source,cmp_destination,the_config->uses_md5)){
-                    add_file_entry(difference,cmp_destination->path_and_name);
+                    add_file_entry(difference,cmp_source->path_and_name);
                 }
+                cmp_destination=cmp_destination->next;
             }
+            cmp_source=cmp_source->next;
         }
-
+        printf("Difference \n");
+        display_files_list(difference);
+        /*
         // Apply difference into destination
         files_list_entry_t *cmp_difference = difference->head;
         while(cmp_difference->next){
             copy_entry_to_destination(difference->head,the_config);
         }
-        }
+         */
     }
+    return;
 }
 
 /*!
@@ -65,26 +77,20 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
  */
 bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
   if (has_md5) {
-        
-        if (memcmp(lhd->md5sum, rhd->md5sum, sizeof(lhd->md5sum)) != 0) {
-            return true;  // Les empreintes MD5 sont différentes
-        }
-    }
-    if (difftime(lhd->mtime.tv_sec,rhd->mtime.tv_sec) == 0){
-
-	    if(lhd->size == rhd->size){
-
-		    if(lhd->entry_type == rhd->entry_type){
-
-			    if(lhd->mode == rhd->mode){
-                
-				    return false;
-                
-			    }
-		    }
-	    }
-    }
-    return true;
+      if (memcmp(lhd->md5sum, rhd->md5sum, sizeof(lhd->md5sum)) != 0) {
+          return true;  // Les empreintes MD5 sont différentes
+      }
+  }
+  if (difftime(lhd->mtime.tv_sec,rhd->mtime.tv_sec) == 0){
+      if(lhd->size == rhd->size){
+          if(lhd->entry_type == rhd->entry_type){
+              if(lhd->mode == rhd->mode){
+                  return false;
+              }
+          }
+      }
+  }
+  return true;
 }
 
 /*!
@@ -195,17 +201,12 @@ DIR *open_dir(char *path) {
  */
 struct dirent *get_next_entry(DIR *dir)  {
     struct dirent *next_entry;
-    next_entry = readdir(dir);
-    if(!next_entry){
-        return NULL;
-    }
-    else{
+    while((next_entry = readdir(dir))!=NULL){
         if(next_entry->d_type == DT_REG || next_entry->d_type == DT_DIR){
-            if(strcmp(next_entry->d_name, ".") == 0 || strcmp(next_entry->d_name, "..") == 0){
-                return NULL;
+            if(strcmp(next_entry->d_name, ".") != 0 && strcmp(next_entry->d_name, "..") != 0){
+                return next_entry;
             }
-            return next_entry;
         }
-        return NULL;
     }
+    return NULL;
 }
