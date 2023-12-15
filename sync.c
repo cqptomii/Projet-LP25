@@ -46,27 +46,28 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
         files_list_entry_t *cmp_source = source->head;
         files_list_entry_t *cmp_destination;
         while(cmp_source){
-            cmp_destination=destination->head;
-            while(cmp_destination) {
-                if(!find_entry_by_name(destination,cmp_source->path_and_name,0,0)){
-                    add_file_entry(difference,cmp_source->path_and_name);
-                }
-                if (mismatch(cmp_source, cmp_destination, the_config->uses_md5)) {
+            if(destination->head) {
+                if (!find_entry_by_name(destination, cmp_source->path_and_name, strlen(the_config->source), strlen(the_config->destination))) {
                     add_file_entry(difference, cmp_source->path_and_name);
+                }else {
+                    cmp_destination = destination->head;
+                    while (cmp_destination) {
+                        if (mismatch(cmp_source, cmp_destination, the_config->uses_md5)) {
+                            add_file_entry(difference, cmp_source->path_and_name);
+                        }
+                        cmp_destination = cmp_destination->next;
+                    }
                 }
-                cmp_destination=cmp_destination->next;
+            }else{
+                add_file_entry(difference,cmp_source->path_and_name);
             }
             cmp_source=cmp_source->next;
         }
-        printf("Difference \n");
-        display_files_list(difference);
-        /*
         // Apply difference into destination
         files_list_entry_t *cmp_difference = difference->head;
         while(cmp_difference->next){
             copy_entry_to_destination(difference->head,the_config);
         }
-         */
     }
     return;
 }
@@ -81,6 +82,7 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
 bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
   if (has_md5) {
       if (memcmp(lhd->md5sum, rhd->md5sum, sizeof(lhd->md5sum)) != 0) {
+          perror("MD5 sum are different \n");
           return true;  // Les empreintes MD5 sont différentes
       }
   }
@@ -90,9 +92,9 @@ bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
               if(lhd->mode == rhd->mode){
                   return false;
               }
+              }
           }
       }
-  }
   return true;
 }
 
@@ -123,6 +125,7 @@ void make_files_lists_parallel(files_list_t *src_list, files_list_t *dst_list, c
  */
 void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t *the_config) {
     char destination_path[PATH_SIZE];
+    //delete prefix from file_list_entry
     if (S_ISREG(source_entry->mode)) {
         concat_path(destination_path, the_config->destination, source_entry->path_and_name);
         int source_fd = open(source_entry->path_and_name, O_RDONLY);
@@ -143,12 +146,11 @@ void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t
         }
         close(source_fd);
         close(destination_fd);
-        // Keeping aess modes and mtime
-        utimensat(AT_FDCWD, destination_path, &(struct timespec[]){source_entry->mtime, source_entry->mtime}, 0);
-    } else if (S_ISDIR(source_entry->mode)) {
-        concat_path(destination_path, the_config->destination, source_entry->path_and_name);
-        if (mkdir(destination_path, source_entry->mode) == -1) {
-            perror("Error creating destination directory");
+        // Keeping access modes and mtime
+        struct timespec mtime[2] = {source_entry->mtime, source_entry->mtime};
+        if (utimensat(AT_FDCWD, destination_path, mtime, 0) == -1) {
+            perror("Error setting acces modes and mtime");
+            return;
         }
     }
 }

@@ -131,18 +131,15 @@ files_list_entry_t *find_entry_by_name(files_list_t *list, char *file_path, size
         return NULL;
     }
     if(list->head) {
+        size_t path_len = strlen(file_path) - start_of_src - 1 ;
+        //
         files_list_entry_t *cmp = list->head;
-        size_t path_len = strlen(file_path) - start_of_dest;
-        while (cmp->next) {
-            size_t cmp_len = strlen(cmp->path_and_name) - start_of_src;
-            if (cmp_len >= path_len && strncmp(cmp->path_and_name+start_of_src,file_path+start_of_dest, path_len)==0){
+        while (cmp) {
+            size_t cmp_len = strlen(cmp->path_and_name) - start_of_dest - 1;
+            if (cmp_len == path_len && strncmp(cmp->path_and_name+start_of_dest+1,file_path+start_of_src+1, path_len)==0){
                 return cmp;
             }
             cmp = cmp->next;
-        }
-        size_t cmp_len = strlen(cmp->path_and_name) - start_of_src;
-        if(cmp_len >= path_len && (strncmp(cmp->path_and_name + start_of_src, file_path + start_of_dest, path_len)==0)){
-            return cmp;
         }
     }
     return NULL;
