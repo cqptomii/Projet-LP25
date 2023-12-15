@@ -87,7 +87,7 @@ bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
           return true;  // Les empreintes MD5 sont différentes
       }
   }
-  if (difftime(lhd->mtime.tv_sec,rhd->mtime.tv_sec) == 0){
+  if (difftime(lhd->mtime.tv_nsec,rhd->mtime.tv_nsec) == 0){
       if(lhd->size == rhd->size){
           if(lhd->entry_type == rhd->entry_type){
               if(lhd->mode == rhd->mode){
@@ -129,8 +129,10 @@ void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t
     //delete prefix from file_list_entry
     if (S_ISREG(source_entry->mode)) {
         concat_path(file_created_path, the_config->destination, source_entry->path_and_name+strlen(the_config->source)+1);
+        printf("|| Copying %s into %s ||",file_created_path,the_config->destination);
         int source_fd = open(source_entry->path_and_name, O_RDONLY);
         if (source_fd == -1) {
+            printf(" Failed \n");
             perror("Error during source file opening \n");
             return;
         }
@@ -144,14 +146,18 @@ void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t
             strcat(dir_path,token);
             if(strcmp(dir_path,file_created_path)!=0) {
                 if(mkdir(dir_path,0777) != 0) {
+                    printf(" Failed \n");
                     perror("Canno't open the path \n");
                     return;
+                }else{
+
                 }
             }
             token = strtok(NULL,sep);
         }
         int destination_fd = open(file_created_path, O_WRONLY | O_CREAT | O_TRUNC, source_entry->mode);
         if (destination_fd == -1) {
+            printf(" Failed \n");
             perror("Error during destination file opening \n");
             return;
         }
@@ -159,6 +165,7 @@ void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t
         off_t offset = 0;
         ssize_t bytes_copied = sendfile(destination_fd, source_fd, &offset, source_entry->size);
         if (bytes_copied == -1) {
+            printf(" Failed \n");
             perror("Error copying file contents");
             return;
         }
@@ -167,9 +174,11 @@ void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t
         // Keeping access modes and mtime
         struct timespec mtime[2] = {source_entry->mtime, source_entry->mtime};
         if (utimensat(AT_FDCWD, file_created_path, mtime, 0) == -1) {
+            printf(" Failed \n");
             perror("Error setting acces modes and mtime");
             return;
         }
+        printf(" Succes \n");
     }
 }
 
