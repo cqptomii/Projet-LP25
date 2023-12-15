@@ -28,11 +28,11 @@
  */
 int get_file_stats(files_list_entry_t *entry) {
     struct stat buf;
-    if(stat(entry->path_and_name, &buf)){
+    if(stat(entry->path_and_name, &buf)) {
        return -1;
     }
     // if entry is File
-    if(S_ISREG(buf.st_mode)){
+    if(S_ISREG(buf.st_mode)) {
         entry->entry_type = FICHIER;
         entry->mode = buf.st_mode;
         entry->mtime.tv_nsec = buf.st_mtime/100;
@@ -41,7 +41,7 @@ int get_file_stats(files_list_entry_t *entry) {
         return 0;
     }
     //if entry is Directories
-    if(S_ISDIR(buf.st_mode)){
+    if(S_ISDIR(buf.st_mode)) {
         entry->entry_type = DOSSIER;
         entry->mode = buf.st_mode;
         return 0;
@@ -70,18 +70,18 @@ int compute_file_md5(files_list_entry_t *entry) {
     unsigned int digest_len;
     OpenSSL_add_all_digests();
     hachage = EVP_get_digestbyname("md5");
-    if (!hachage){
+    if (!hachage) {
         printf("Unknown message digest\n");
         return -1;
     }
     operations = EVP_MD_CTX_new();
-    if(!operations){
+    if(!operations) {
         printf("Error creating context\n");
         return -1;
     }
     EVP_DigestInit_ex(operations, hachage, NULL);
     //HACHAGE
-    while (1){
+    while (1) {
         int bytes = (int)fread(buffer, 1, PATH_SIZE, f);
         if (bytes <= 0) break;
         EVP_DigestUpdate(operations, buffer, bytes);
@@ -102,11 +102,11 @@ int compute_file_md5(files_list_entry_t *entry) {
  */
 bool directory_exists(char *path_to_dir) {
 	DIR *directories = open_dir(path_to_dir);
-	if(directories){
+	if(directories) {
 		closedir(directories);
 		return true;
 	}
-	else{
+	else {
 		return false;
 	}
 }
