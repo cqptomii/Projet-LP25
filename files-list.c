@@ -28,62 +28,60 @@ void clear_files_list(files_list_t *list) {
  *  @return 0 if success, -1 else (out of memory)
  */
 files_list_entry_t *add_file_entry(files_list_t *list, char *file_path) {
+    if(!file_path){
+        return NULL;
+    }
     files_list_entry_t *newel = (files_list_entry_t* )malloc(sizeof(files_list_entry_t));
     strcpy(newel->path_and_name,file_path);
     newel->next = NULL;
     newel->prev = NULL;
-    if(get_file_stats(newel) == -1){
-        printf("Error during get_file_stats \n");
-        return NULL;
-    }else {
-        if(list) {
-            if (!list->head) {
-                add_entry_to_tail(list, newel);
-                return list->head;
-            }else {
-                files_list_entry_t *cmp = list->head;
-                int verif_length;
-                while(1){
-                    verif_length = (int)(strlen(cmp->path_and_name)-strlen(file_path));
-                    if(verif_length > 0){
-                        break;
-                    }
-                    if(verif_length == 0){
-                        verif_length = strcmp(cmp->path_and_name,file_path);
-                        if(verif_length > 0 || verif_length == 0){
-                            break;
-                        }
-                    }
-                    if(!cmp->next){
-                        break;
-                    }
-                    cmp=cmp->next;
+    if(list) {
+        if (!list->head) {
+            add_entry_to_tail(list, newel);
+            return list->head;
+        }else {
+            files_list_entry_t *cmp = list->head;
+            int verif_length;
+            while(1){
+                verif_length = (int)(strlen(cmp->path_and_name)-strlen(file_path));
+                if(verif_length > 0){
+                    break;
                 }
                 if(verif_length == 0){
-                    return NULL;
-                }else{
-                    if(verif_length > 0) {
-                        if(cmp == list->head){
-                            newel->next = cmp;
-                            cmp->prev = newel;
-                            list->head = newel;
-                        }else {
-                            newel->next = cmp;
-                            newel->prev = cmp->prev;
-                            (cmp->prev)->next = newel;
-                            cmp->prev = newel;
-                        }
-                        return list->head;
+                    verif_length = strcmp(cmp->path_and_name,file_path);
+                    if(verif_length > 0 || verif_length == 0){
+                        break;
                     }
                 }
                 if(!cmp->next){
-                    add_entry_to_tail(list,newel);
-                    return list->tail;
+                    break;
+                }
+                cmp=cmp->next;
+            }
+            if(verif_length == 0){
+                return NULL;
+            }else{
+                if(verif_length > 0) {
+                    if(cmp == list->head){
+                        newel->next = cmp;
+                        cmp->prev = newel;
+                        list->head = newel;
+                    }else {
+                        newel->next = cmp;
+                        newel->prev = cmp->prev;
+                        (cmp->prev)->next = newel;
+                        cmp->prev = newel;
+                    }
+                    return list->head;
                 }
             }
+            if(!cmp->next){
+                add_entry_to_tail(list,newel);
+                return list->tail;
+            }
         }
-        return NULL;
     }
+    return NULL;
 }
 
 /*!
@@ -95,26 +93,26 @@ files_list_entry_t *add_file_entry(files_list_t *list, char *file_path) {
  * @return 0 in case of success, -1 else
  */
 int add_entry_to_tail(files_list_t *list, files_list_entry_t *entry) {
-    if(list) {
-        if (!list->head) {
-            list->head = entry;
+    if(!list){
+        return -1;
+    }
+    if (!list->head) {
+        list->head = entry;
+        list->tail = entry;
+        return 0;
+    }else {
+        if (list->head == list->tail) {
+            (list->head)->next = entry;
+            entry->prev = list->head;
             list->tail = entry;
             return 0;
         }else {
-            if (list->head == list->tail) {
-                (list->head)->next = entry;
-                entry->prev = list->head;
-                list->tail = entry;
-                return 0;
-            }else {
-                entry->prev = list->tail;
-                (list->tail)->next = entry;
-                list->tail = entry;
-                return 0;
-            }
+            entry->prev = list->tail;
+            (list->tail)->next = entry;
+            list->tail = entry;
+            return 0;
         }
     }
-    return -1;
 }
 
 /*!

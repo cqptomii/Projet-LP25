@@ -24,15 +24,15 @@ void display_help(char *my_name) {
  * @param the_config is a pointer to the configuration to be initialized
  */
 void init_configuration(configuration_t *the_config) {
-    configuration_t default_config = {.source="",.destination="",.processes_count=1,.is_parallel=false,.uses_md5=false,.verbose=false,.dry_run=false};
-
-    the_config->uses_md5 = default_config.uses_md5;
-    the_config->is_parallel = default_config.is_parallel;
-    the_config->processes_count = default_config.processes_count;
-    the_config->dry_run = default_config.dry_run;
-    the_config->verbose = default_config.verbose;
-    strcpy(the_config->source,default_config.source);
-    strcpy(the_config->destination,default_config.destination);
+    if(the_config) {
+        the_config->uses_md5 = false;
+        the_config->is_parallel = false;
+        the_config->processes_count = 1;
+        the_config->dry_run = false;
+        the_config->verbose = false;
+        strcpy(the_config->source, "");
+        strcpy(the_config->destination, "");
+    }
 }
 
 /*!
@@ -45,7 +45,9 @@ void init_configuration(configuration_t *the_config) {
 int set_configuration(configuration_t *the_config, int argc, char *argv[]) {
     // Copy source_dir and destination_dir in the_config
     // Check source_dir , destination_dir existence
-
+    if(!the_config){
+        return -1;
+    }
     int opt = 0,parameter_count = 0;
     struct option my_opts[] = {
             {.name="date-size-only", .has_arg=0, .flag=0, .val='d'},
@@ -54,7 +56,7 @@ int set_configuration(configuration_t *the_config, int argc, char *argv[]) {
             {.name="dry-run", .has_arg=0, .flag=0, .val='r'},
             {.name=0, .has_arg=0, .flag=0, .val=0}, // last element must be zero
     };
-    while ((opt = (getopt_long(argc, argv, "n::h::", my_opts, NULL))) != -1) {
+    while ((opt = (getopt_long(argc, argv, "n:h", my_opts, NULL))) != -1) {
         switch (opt) {
             case 'd':
                 the_config->uses_md5=optarg;
@@ -75,11 +77,6 @@ int set_configuration(configuration_t *the_config, int argc, char *argv[]) {
             case 'n':
                 if(optarg){
                     the_config->processes_count = (int)strtol(optarg,NULL,10);
-                    ++parameter_count;
-                    break;
-                }
-                if(optind != argc){
-                    the_config->processes_count = (int)strtol(argv[optind],NULL,10);
                     parameter_count+=2;
                     break;
                 }

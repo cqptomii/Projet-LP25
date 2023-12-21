@@ -35,6 +35,7 @@ int get_file_stats(files_list_entry_t *entry) {
     if(S_ISREG(buf.st_mode)) {
         entry->entry_type = FICHIER;
         entry->mode = buf.st_mode;
+        entry->mtime.tv_sec = buf.st_mtime;
         entry->mtime.tv_nsec = buf.st_mtime/100;
         entry->size = buf.st_size;
         compute_file_md5(entry);
@@ -101,6 +102,9 @@ int compute_file_md5(files_list_entry_t *entry) {
  * @return true if directory exists, false else
  */
 bool directory_exists(char *path_to_dir) {
+    if(!path_to_dir){
+        return false;
+    }
 	DIR *directories = open_dir(path_to_dir);
 	if(directories) {
 		closedir(directories);
@@ -118,6 +122,9 @@ bool directory_exists(char *path_to_dir) {
  * Hint: try to open a file in write mode in the target directory.
  */
 bool is_directory_writable(char *path_to_dir) {
+    if(!path_to_dir){
+        return false;
+    }
     char path_file[PATH_SIZE];
 	DIR *directories = open_dir(path_to_dir);
     if(!directories) {
