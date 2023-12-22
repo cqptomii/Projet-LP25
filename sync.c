@@ -45,15 +45,12 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
         files_list_entry_t *cmp_destination;
         while(cmp_source){
             if(destination.head) {
-                if (!find_entry_by_name(&destination, cmp_source->path_and_name, strlen(the_config->source), strlen(the_config->destination))) {
+                cmp_destination=find_entry_by_name(&destination, cmp_source->path_and_name, strlen(the_config->source), strlen(the_config->destination));
+                if (!cmp_destination) {
                     add_file_entry(&difference, cmp_source->path_and_name);
-                }else {
-                    cmp_destination = destination.head;
-                    while (cmp_destination) {
-                        if (!mismatch(cmp_source, cmp_destination, the_config->uses_md5)) {
-                            add_file_entry(&difference, cmp_source->path_and_name);
-                        }
-                        cmp_destination = cmp_destination->next;
+                }else{
+                    if (mismatch(cmp_source, cmp_destination, the_config->uses_md5)) {
+                        add_file_entry(&difference, cmp_source->path_and_name);
                     }
                 }
             }else{
@@ -62,6 +59,7 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
             cmp_source=cmp_source->next;
         }
         make_files_list(&difference,NULL);
+        display_files_list(&difference);
         // Apply difference into destination
         files_list_entry_t *cmp_difference = difference.head;
         while(cmp_difference){
@@ -89,8 +87,8 @@ bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
               return true;  // Les empreintes MD5 sont différentes
           }
     }
-    if (difftime(lhd->mtime.tv_nsec,rhd->mtime.tv_nsec) == 0 && difftime(lhd->mtime.tv_sec,rhd->mtime.tv_sec) == 0){
-       if(lhd->size == rhd->size){
+    if (difftime(lhd->mtime.tv_nsec,rhd->mtime.tv_nsec) == 0.0 && difftime(lhd->mtime.tv_sec,rhd->mtime.tv_sec) == 0.0){
+        if(lhd->size == rhd->size){
            if(lhd->entry_type == rhd->entry_type){
                if(lhd->mode == rhd->mode){
                   return false;
