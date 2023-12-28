@@ -29,7 +29,36 @@ int prepare(configuration_t *the_config, process_context_t *p_context) {
  * @return the PID of the child process (it never returns in the child process)
  */
 int make_process(process_context_t *p_context, process_loop_t func, void *parameters) {
-    // Je m'en occupe -> Fabien
+    
+    pid_t child_pid = fork();
+
+    if (child_pid == -1) {
+        perror("Erreur lors de la création du processus");
+        return -1;
+    }
+
+    if (child_pid == 0) {
+        // Dans le processus enfant, on exécute la fonction spécifiée par func avec les paramètres fournis
+        func(parameters);
+        perror("Erreur lors de l'exécution de la fonction dans le processus enfant");
+        returrn -1;
+    }
+
+    // Dans le processus parent, on stock le PID du processus enfant dans p_context->source_lister_pid et *source_analyzers_pids
+    if (p_context != NULL && p_context->processes_count > 0) {
+        if (func == lister_process_loop) {
+            lister_configuration_t *lister_config = (lister_configuration_t *) parameters;
+            p_context->source_lister_pid = child_pid;
+        } else if (func == analyzer_process_loop) {
+            analyzer_configuration_t *analyzer_config = (analyzer_configuration_t *) parameters;
+            if (p_context->source_analyzers_pids != NULL) {
+                p_context->source_analyzers_pids[p_context->processes_count - 1] = child_pid;
+            }
+        }
+    }
+    
+    return child_pid;
+    
 }
 
 /*!
