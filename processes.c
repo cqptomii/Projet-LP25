@@ -84,7 +84,6 @@ void analyzer_process_loop(void *parameters) {
  */
 void clean_processes(configuration_t *the_config, process_context_t *p_context) {
     if(the_config->is_parallel){
-        // Je peux m'en occuper si personne n'en veut -> Fabien
 
     }
     // Do nothing if not parallel
