@@ -20,9 +20,9 @@ int send_file_entry(int msg_queue, int recipient, files_list_entry_t *file_entry
     msg.mtype = recipient;
     msg.op_code = (char)cmd_code;
     msg.payload = *file_entry;
-    msg.reply_to = 0; // doute
-    
-    return msgsnd(msg_queue, &msg, sizeof(files_list_entry_transmit_t), 0);
+    msg.reply_to = msg_queue;
+    size_t msg_length = sizeof(files_list_entry_transmit_t) - sizeof(long);
+    return msgsnd(msg_queue, &msg, msg_length, IPC_NOWAIT);
 }
 
 /*!
@@ -33,6 +33,13 @@ int send_file_entry(int msg_queue, int recipient, files_list_entry_t *file_entry
  * @return the result of msgsnd
  */
 int send_analyze_dir_command(int msg_queue, int recipient, char *target_dir) {
+    analyze_dir_command_t dir_command;
+    dir_command.mtype = recipient;
+    dir_command.op_code = COMMAND_CODE_ANALYZE_DIR;
+    strcpy(dir_command.target,target_dir);
+    size_t msg_length = sizeof(analyze_dir_command_t) - sizeof(long);
+
+    return msgsnd(msg_queue, &dir_command, msg_length, IPC_NOWAIT);
 }
 
 // The 3 following functions are one-liners
@@ -46,6 +53,7 @@ int send_analyze_dir_command(int msg_queue, int recipient, char *target_dir) {
  * Calls send_file_entry function
  */
 int send_analyze_file_command(int msg_queue, int recipient, files_list_entry_t *file_entry) {
+    return send_file_entry(msg_queue, recipient, file_entry, COMMAND_CODE_ANALYZE_FILE);
 }
 
 /*!
@@ -57,6 +65,7 @@ int send_analyze_file_command(int msg_queue, int recipient, files_list_entry_t *
  * Calls send_file_entry function
  */
 int send_analyze_file_response(int msg_queue, int recipient, files_list_entry_t *file_entry) {
+    return send_file_entry(msg_queue,recipient,file_entry,COMMAND_CODE_FILE_ANALYZED);
 }
 
 /*!
@@ -68,6 +77,7 @@ int send_analyze_file_response(int msg_queue, int recipient, files_list_entry_t 
  * Calls send_file_entry function
  */
 int send_files_list_element(int msg_queue, int recipient, files_list_entry_t *file_entry) {
+    return send_file_entry(msg_queue,recipient,file_entry,COMMAND_CODE_FILE_ENTRY);
 }
 
 /*!
@@ -77,6 +87,11 @@ int send_files_list_element(int msg_queue, int recipient, files_list_entry_t *fi
  * @return the result of msgsnd
  */
 int send_list_end(int msg_queue, int recipient) {
+    simple_command_t end_message;
+    end_message.mtype = recipient;
+    end_message.message = COMMAND_CODE_LIST_COMPLETE;
+    size_t msg_length = sizeof(simple_command_t) - sizeof(long);
+    return msgsnd(msg_queue,end_message,msg_length,IPC_NOWAIT);
 }
 
 /*!
@@ -86,6 +101,11 @@ int send_list_end(int msg_queue, int recipient) {
  * @return the result of msgsnd
  */
 int send_terminate_command(int msg_queue, int recipient) {
+    simple_command_t terminate_message;
+    terminate_message.mtype = recipient;
+    terminate_message.message = COMMAND_CODE_TERMINATE;
+    size_t msg_length = sizeof(simple_command_t) - sizeof(long);
+    return msgsnd(msg_queue,terminate_message,msg_length,IPC_NOWAIT);
 }
 
 /*!
@@ -95,4 +115,9 @@ int send_terminate_command(int msg_queue, int recipient) {
  * @return the result of msgsnd
  */
 int send_terminate_confirm(int msg_queue, int recipient) {
+    simple_command_t confirm_message;
+    confirm_message.mtype = recipient;
+    confirm_message.message = COMMAND_CODE_TERMINATE_OK;
+    size_t msg_length = sizeof(simple_command_t) - sizeof(long);
+    return msgsnd(msg_queue,confirm_message,msg_length,IPC_NOWAIT);
 }
