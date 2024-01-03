@@ -275,9 +275,6 @@ void make_list(files_list_t *list, char *target) {
     if(!(target_dir = open_dir(target))){// Check file opening
         return;
     }
-    if (the_config->verbose) {
-        printf(" Dir : %s opening \n",target);
-    }
     while((dir_entry=get_next_entry(target_dir)) != NULL){
         concat_path(path_file, target, dir_entry->d_name);
         if(dir_entry->d_type == DT_REG){
@@ -307,11 +304,20 @@ DIR *open_dir(char *path) {
     }
     DIR *directories = NULL;
     directories = opendir(path);
+    if (the_config->verbose) {
+        printf(" Dir : %s opening  |  ",target);
+    }
     if(!directories){
         perror(strerror(errno));
+        if (the_config->verbose) {
+            printf(" FAILED \n");
+        }
         return NULL;
     }
     else{
+        if (the_config->verbose) {
+            printf(" SUCCES \n");
+        }
         return directories;
     }
 }
