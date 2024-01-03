@@ -67,6 +67,7 @@ int make_process(process_context_t *p_context, process_loop_t func, void *parame
  */
 void lister_process_loop(void *parameters) {
     // Je m'en occupe -> Fabien
+    // Je comprends pô
 }
 
 /*!
@@ -75,6 +76,7 @@ void lister_process_loop(void *parameters) {
  */
 void analyzer_process_loop(void *parameters) {
     // Je m'en occupe -> Fabien
+    // Je comprends pô
 }
 
 /*!
