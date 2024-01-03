@@ -18,7 +18,11 @@
 int prepare(configuration_t *the_config, process_context_t *p_context) {
     if (!the_config->is_parallel) {
         return 0;
+    }else{
+        p_context->processes_count = the_config->processes_count;
+        p_context->main_process_pid = getpid();
     }
+    return 0;
 }
 
 /*!
@@ -32,27 +36,25 @@ int make_process(process_context_t *p_context, process_loop_t func, void *parame
     
     pid_t child_pid = fork();
 
-    if (child_pid == -1) {
+    if (child_pid < 0) {
         perror("Erreur lors de la création du processus");
         return -1;
     }
 
     if (child_pid == 0) {
         // Dans le processus enfant, on exécute la fonction spécifiée par func avec les paramètres fournis
-        func(parameters);
-        perror("Erreur lors de l'exécution de la fonction dans le processus enfant");
-        returrn -1;
+        if(func == lister_process_loop  || func == analyzer_process_loop ) {
+            func(parameters);
+        }
     }
 
     // Dans le processus parent, on stock le PID du processus enfant dans p_context->source_lister_pid et *source_analyzers_pids
     if (p_context != NULL && p_context->processes_count > 0) {
         if (func == lister_process_loop) {
-            lister_configuration_t *lister_config = (lister_configuration_t *) parameters;
             p_context->source_lister_pid = child_pid;
         } else if (func == analyzer_process_loop) {
-            analyzer_configuration_t *analyzer_config = (analyzer_configuration_t *) parameters;
-            if (p_context->source_analyzers_pids != NULL) {
-                p_context->source_analyzers_pids[p_context->processes_count - 1] = child_pid;
+            if (p_context->source_analyzers_pids != NULL && p_context->processes_count > 0) {
+                p_context->source_analyzers_pids = child_pid;
             }
         }
     }
@@ -66,7 +68,8 @@ int make_process(process_context_t *p_context, process_loop_t func, void *parame
  * @param parameters is a pointer to its parameters, to be cast to a lister_configuration_t
  */
 void lister_process_loop(void *parameters) {
-    // Je m'en occupe -> Fabien
+    if(parameters){
+    }
 }
 
 /*!
@@ -74,7 +77,8 @@ void lister_process_loop(void *parameters) {
  * @param parameters is a pointer to its parameters, to be cast to an analyzer_configuration_t
  */
 void analyzer_process_loop(void *parameters) {
-    // Je m'en occupe -> Fabien
+    if(parameters){
+    }
 }
 
 /*!
@@ -84,7 +88,9 @@ void analyzer_process_loop(void *parameters) {
  */
 void clean_processes(configuration_t *the_config, process_context_t *p_context) {
     if(the_config->is_parallel){
-
+        send_terminate_command(p_context->message_queue_id,p_context->main_process_pid);
+        while(msgget(p_context->shared_key,0) < 0 ){
+        }
     }
     // Do nothing if not parallel
     // Send terminate
