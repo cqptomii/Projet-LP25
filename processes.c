@@ -60,6 +60,7 @@ int make_process(process_context_t *p_context, process_loop_t func, void *parame
                 if(lister_config->my_recipient_id == MSG_TYPE_TO_DESTINATION_LISTER){
                     p_context->destination_lister_pid = child_pid;
                 }
+                free(lister_config);
             } else if (func == analyzer_process_loop) {
                 if (p_context->source_analyzers_pids != NULL && p_context->processes_count > 0) {
                     analyzer_configuration_t *analyzer_config = (analyzer_configuration_t *) parameters;
@@ -69,6 +70,7 @@ int make_process(process_context_t *p_context, process_loop_t func, void *parame
                     if(analyzer_config->my_recipient_id == MSG_TYPE_TO_DESTINATION_ANALYZERS){
                         p_context->destination_analyzers_pids = child_pid;
                     }
+                    free(analyzer_config);
                 }
             }
             return child_pid;
@@ -82,6 +84,7 @@ int make_process(process_context_t *p_context, process_loop_t func, void *parame
  */
 void lister_process_loop(void *parameters) {
     if(parameters){
+        lister_configuration_t *lister_config = (lister_configuration_t *) parameters;
     }
 }
 
@@ -91,6 +94,7 @@ void lister_process_loop(void *parameters) {
  */
 void analyzer_process_loop(void *parameters) {
     if(parameters){
+        analyzer_configuration_t *analyzer_config = (analyzer_configuration_t *) parameters;
     }
 }
 

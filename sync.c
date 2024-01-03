@@ -24,20 +24,35 @@
  * @param p_context is a pointer to the processes context
  */
 void synchronize(configuration_t *the_config, process_context_t *p_context) {
+    // Init list
+    files_list_t source;
+    source.head=NULL;
+    source.tail=NULL;
+    files_list_t destination;
+    destination.head=NULL;
+    destination.tail=NULL;
+    files_list_t difference;
+    difference.head=NULL;
+    difference.tail=NULL;
     if(the_config->is_parallel){
-
+        if(the_config->verbose) {
+            printf("Build file list on target : %s  | ",the_config->source);
+        }
+        make_files_lists_parallel(&source,&destination,the_config,0);
+        if (the_config->verbose) {
+            display_files_list(&source);
+        }
+        if(the_config->verbose){
+            printf("\n\n");
+        }
+        if (the_config->verbose) {
+            display_files_list(&destination);
+        }
+        if(the_config->verbose){
+            printf("\n\n");
+        }
     }
     else{
-        // Init list
-        files_list_t source;
-        source.head=NULL;
-        source.tail=NULL;
-        files_list_t destination;
-        destination.head=NULL;
-        destination.tail=NULL;
-        files_list_t difference;
-        difference.head=NULL;
-        difference.tail=NULL;
         //Build source / destination / difference
         if(the_config->verbose) {
             printf("Build file list on target : %s  | ",the_config->source);
