@@ -53,20 +53,20 @@ int make_process(process_context_t *p_context, process_loop_t func, void *parame
         // Dans le processus parent, on stock le PID du processus enfant dans p_context->source_lister_pid et *source_analyzers_pids
         if (p_context != NULL && p_context->processes_count > 0) {
             if (func == lister_process_loop) {
-                lister_configuration_t lister_config = (lister_configuration_t) parameters;
-                if(lister_config.my_recipient_id == MSG_TYPE_TO_SOURCE_LISTER){
+                lister_configuration_t *lister_config = (lister_configuration_t *) parameters;
+                if(lister_config->my_recipient_id == MSG_TYPE_TO_SOURCE_LISTER){
                     p_context->source_lister_pid = child_pid;
                 }
-                if(lister_config.my_recipient_id == MSG_TYPE_TO_DESTINATION_LISTER){
+                if(lister_config->my_recipient_id == MSG_TYPE_TO_DESTINATION_LISTER){
                     p_context->destination_lister_pid = child_pid;
                 }
             } else if (func == analyzer_process_loop) {
                 if (p_context->source_analyzers_pids != NULL && p_context->processes_count > 0) {
-                    analyzer_configuration_t analyzer_config = (analyzer_configuration_t) parameters;
-                    if(analyzer_config.my_recipient_id == MSG_TYPE_TO_SOURCE_ANALYZERS){
+                    analyzer_configuration_t *analyzer_config = (analyzer_configuration_t *) parameters;
+                    if(analyzer_config->my_recipient_id == MSG_TYPE_TO_SOURCE_ANALYZERS){
                         p_context->source_analyzers_pids = child_pid;
                     }
-                    if(analyzer_config.my_recipient_id == MSG_TYPE_TO_DESTINATION_ANALYZERS){
+                    if(analyzer_config->my_recipient_id == MSG_TYPE_TO_DESTINATION_ANALYZERS){
                         p_context->destination_analyzers_pids = child_pid;
                     }
                 }

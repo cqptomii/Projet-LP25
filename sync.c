@@ -39,12 +39,18 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
         difference.head=NULL;
         difference.tail=NULL;
         //Build source / destination / difference
+        if(the_config->verbose) {
+            printf("Build file list on target : %s  | ",the_config->source);
+        }
         make_files_list(&source,the_config->source);
         if (the_config->verbose) {
             display_files_list(&source);
         }
         if(the_config->verbose){
             printf("\n\n");
+        }
+        if(the_config->verbose) {
+            printf("Build file list on target : %s  | ",the_config->destination);
         }
         make_files_list(&destination,the_config->destination);
         if (the_config->verbose) {
@@ -67,11 +73,20 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
                     }
                     add_file_entry(&difference, cmp_source->path_and_name);
                 }else{
+                    if(the_config->verbose) {
+                        printf(" Verification of files differences : ");
+                    }
                     if (mismatch(cmp_source, cmp_destination, the_config->uses_md5)) {
+                        if(the_config->verbose) {
+                            printf(" DIFFERENT \n");
+                        }
                         add_file_entry(&difference, cmp_source->path_and_name);
                         if(the_config->verbose){
                             printf("Add file %s to difference \n",cmp_source->path_and_name);
                         }
+                    }
+                    if(the_config->verbose) {
+                        printf(" EQUAL \n");
                     }
                 }
             }else{
@@ -115,15 +130,9 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
  * @return true if both files are not equal, false else
  */
 bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
-    if(the_config->verbose) {
-        printf(" Verification of files differences : ");
-    }
     if (has_md5==true) {
           if (memcmp(lhd->md5sum, rhd->md5sum, sizeof(lhd->md5sum)) != 0) {
               perror("MD5 sum are different \n");
-              if(the_config->verbose) {
-                  printf(" EQUAL \n");
-              }
               return true;  // Les empreintes MD5 sont différentes
           }
     }
@@ -131,16 +140,10 @@ bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
         if(lhd->size == rhd->size){
            if(lhd->entry_type == rhd->entry_type){
                if(lhd->mode == rhd->mode){
-                   if(the_config->verbose) {
-                       printf(" DIFFERENT \n");
-                   }
                    return false;
                }
            }
        }
-    }
-    if(the_config->verbose) {
-        printf(" EQUAL \n");
     }
     return true;
 }
@@ -151,23 +154,14 @@ bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
  * @param target_path is the path whose files to list
  */
 void make_files_list(files_list_t *list, char *target_path) {
-    if(the_config->verbose) {
-        printf("Build file list on target : %s  | ",target_path);
-    }
     make_list(list,target_path);
     files_list_entry_t *cmp=list->head;
     while(cmp){
         if(get_file_stats(cmp)==-1){
-            if(the_config->verbose) {
-                printf(" Failed \n");
-            }
             printf("Error  \n");
             return;
         }
         cmp = cmp->next;
-    }
-    if(the_config->verbose) {
-        printf(" Succes \n");
     }
 }
 
@@ -279,16 +273,10 @@ void make_list(files_list_t *list, char *target) {
         concat_path(path_file, target, dir_entry->d_name);
         if(dir_entry->d_type == DT_REG){
             add_file_entry(list, path_file);
-            if (the_config->verbose) {
-                printf("add file %s to the current list \n",path_file);
-            }
         }
         if(dir_entry->d_type == DT_DIR){
             make_list(list,path_file);
         }
-    }
-    if (the_config->verbose) {
-        printf("Close Dir \n");
     }
     closedir(target_dir);
 }
@@ -304,20 +292,11 @@ DIR *open_dir(char *path) {
     }
     DIR *directories = NULL;
     directories = opendir(path);
-    if (the_config->verbose) {
-        printf(" Dir : %s opening  |  ",target);
-    }
     if(!directories){
         perror(strerror(errno));
-        if (the_config->verbose) {
-            printf(" FAILED \n");
-        }
         return NULL;
     }
     else{
-        if (the_config->verbose) {
-            printf(" SUCCES \n");
-        }
         return directories;
     }
 }
