@@ -28,12 +28,12 @@ int prepare(configuration_t *the_config, process_context_t *p_context) {
         }
 
         //set-up the mq FIFO
-        p_context->message_queue_id = msgget(mq_key,IPC_CREAT | 0666);
+        p_context->message_queue_id = msgget(p_context->shared_key,IPC_CREAT | 0666);
         if(p_context->message_queue_id == -1){
             perror("Erreur lors de la création de la file de message \n");
             exit(-1);
         }
-        
+
         //set-up source / destination lister_pid to 0
         p_context->source_lister_pid = 0;
         p_context->destination_lister_pid = 0;
@@ -80,10 +80,12 @@ int make_process(process_context_t *p_context, process_loop_t func, void *parame
                 if (p_context->source_analyzers_pids != NULL && p_context->processes_count > 0) {
                     analyzer_configuration_t *analyzer_config = (analyzer_configuration_t *) parameters;
                     if(analyzer_config->my_recipient_id == MSG_TYPE_TO_SOURCE_ANALYZERS) {
-                        p_context->source_analyzers_pids = child_pid;
+                        p_context->source_analyzers_pids[p_context->processes_count] = child_pid;
+                        p_context->processes_count++;
                     }
                     if(analyzer_config->my_recipient_id == MSG_TYPE_TO_DESTINATION_ANALYZERS){
-                        p_context->destination_analyzers_pids = child_pid;
+                        p_context->destination_analyzers_pids[p_context->processes_count] = child_pid;
+                        p_context->processes_count++;
                     }
                     free(analyzer_config);
                 }
@@ -120,9 +122,28 @@ void analyzer_process_loop(void *parameters) {
  */
 void clean_processes(configuration_t *the_config, process_context_t *p_context) {
     if(the_config->is_parallel){
-        send_terminate_command(p_context->message_queue_id,p_context->main_process_pid);
-        while(msgget(p_context->shared_key,0) < 0 ){
+        //envoye des messages de terminaison des processus fils
+        send_terminate_command(p_context->message_queue_id,p_context->source_lister_pid);
+        send_terminate_command(p_context->message_queue_id,p_context->destination_lister_pid);
+        simple_command_t end_message;
+        memset(&end_message,0, sizeof(simple_command_t));
+
+        //Attente de la reception du message de comfirmation de terminaison des processus fils
+        if(msgrcv(p_context->message_queue_id,&end_message, sizeof(simple_command_t),COMMAND_CODE_TERMINATE_OK,0) == -1){
+            perror("Erreur lors de la reception du message de terminaison ");
+            exit(EXIT_FAILURE);
         }
+
+        //Libération de la mémoire allouer
+        free(p_context->destination_analyzers_pids);
+        free(p_context->source_analyzers_pids);
+
+        //Destruction de la file de message
+        if(msgctl(p_context->message_queue_id,IPC_RMID,NULL) == -1){
+            perror("Erreur durant la suppression de la file de message");
+            exit(EXIT_FAILURE);
+        }
+        free(p_context);
     }
     // Do nothing if not parallel
     // Send terminate
