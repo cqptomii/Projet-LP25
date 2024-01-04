@@ -9,6 +9,7 @@
 #include <string.h>
 #include <errno.h>
 
+#define MQ_KEY_CREATE_ID 42
 /*!
  * @brief prepare prepares (only when parallel is enabled) the processes used for the synchronization.
  * @param the_config is a pointer to the program configuration
@@ -19,7 +20,21 @@ int prepare(configuration_t *the_config, process_context_t *p_context) {
     if (!the_config->is_parallel) {
         return 0;
     }else{
-        //set source / destination lister_pid to 0
+        //create mq_key
+        p_context->shared_key = ftok("mq_key.txt", MQ_KEY_CREATE_ID);
+        if(p_context->shared_key == -1 ){
+            perror("Erreur lors de la creation de la clé IPC \n");
+            exit(-1);
+        }
+
+        //set-up the mq FIFO
+        p_context->message_queue_id = msgget(mq_key,IPC_CREAT | 0666);
+        if(p_context->message_queue_id == -1){
+            perror("Erreur lors de la création de la file de message \n");
+            exit(-1);
+        }
+        
+        //set-up source / destination lister_pid to 0
         p_context->source_lister_pid = 0;
         p_context->destination_lister_pid = 0;
         p_context->processes_count = 0;
@@ -64,7 +79,7 @@ int make_process(process_context_t *p_context, process_loop_t func, void *parame
             } else if (func == analyzer_process_loop) {
                 if (p_context->source_analyzers_pids != NULL && p_context->processes_count > 0) {
                     analyzer_configuration_t *analyzer_config = (analyzer_configuration_t *) parameters;
-                    if(analyzer_config->my_recipient_id == MSG_TYPE_TO_SOURCE_ANALYZERS){
+                    if(analyzer_config->my_recipient_id == MSG_TYPE_TO_SOURCE_ANALYZERS) {
                         p_context->source_analyzers_pids = child_pid;
                     }
                     if(analyzer_config->my_recipient_id == MSG_TYPE_TO_DESTINATION_ANALYZERS){
