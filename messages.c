@@ -91,7 +91,7 @@ int send_list_end(int msg_queue, int recipient) {
     end_message.mtype = recipient;
     end_message.message = COMMAND_CODE_LIST_COMPLETE;
     size_t msg_length = sizeof(simple_command_t) - sizeof(long);
-    return msgsnd(msg_queue,end_message,msg_length,IPC_NOWAIT);
+    return msgsnd(msg_queue,&end_message,msg_length,IPC_NOWAIT);
 }
 
 /*!
@@ -105,7 +105,7 @@ int send_terminate_command(int msg_queue, int recipient) {
     terminate_message.mtype = recipient;
     terminate_message.message = COMMAND_CODE_TERMINATE;
     size_t msg_length = sizeof(simple_command_t) - sizeof(long);
-    return msgsnd(msg_queue,terminate_message,msg_length,IPC_NOWAIT);
+    return msgsnd(msg_queue,&terminate_message,msg_length,IPC_NOWAIT);
 }
 
 /*!
@@ -119,5 +119,6 @@ int send_terminate_confirm(int msg_queue, int recipient) {
     confirm_message.mtype = recipient;
     confirm_message.message = COMMAND_CODE_TERMINATE_OK;
     size_t msg_length = sizeof(simple_command_t) - sizeof(long);
-    return msgsnd(msg_queue,confirm_message,msg_length,IPC_NOWAIT);
+
+    return msgsnd(msg_queue,&confirm_message,msg_length,IPC_NOWAIT);
 }
