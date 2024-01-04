@@ -90,8 +90,8 @@ int make_process(process_context_t *p_context, process_loop_t func, void *parame
                 }
             }
         }
-        return child_pid
     }
+    return child_pid;
 }
 
 /*!
@@ -199,15 +199,20 @@ void analyzer_process_loop(void *parameters) {
 void clean_processes(configuration_t *the_config, process_context_t *p_context) {
     // Do nothing if not parallel
     if(the_config->is_parallel){
+        simple_command_t end_message;
+        memset(&end_message,0, sizeof(simple_command_t));
         // Send terminate
         //envoye des messages de terminaison des processus fils
         send_terminate_command(p_context->message_queue_id,p_context->source_lister_pid);
-        send_terminate_command(p_context->message_queue_id,p_context->destination_lister_pid);
-        simple_command_t end_message;
-        memset(&end_message,0, sizeof(simple_command_t));
-
         // Wait for responses
         //Attente de la reception du message de comfirmation de terminaison des processus fils
+        if(msgrcv(p_context->message_queue_id,&end_message, sizeof(simple_command_t),COMMAND_CODE_TERMINATE_OK,0) == -1){
+            perror("Erreur lors de la reception du message de terminaison ");
+            exit(EXIT_FAILURE);
+        }
+
+        memset(&end_message,0, sizeof(simple_command_t));
+        send_terminate_command(p_context->message_queue_id,p_context->destination_lister_pid);
         if(msgrcv(p_context->message_queue_id,&end_message, sizeof(simple_command_t),COMMAND_CODE_TERMINATE_OK,0) == -1){
             perror("Erreur lors de la reception du message de terminaison ");
             exit(EXIT_FAILURE);
