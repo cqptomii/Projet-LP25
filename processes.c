@@ -24,21 +24,20 @@ int prepare(configuration_t *the_config, process_context_t *p_context) {
         p_context->shared_key = ftok("mq_key.txt", MQ_KEY_CREATE_ID);
         if(p_context->shared_key == -1 ){
             perror("Erreur lors de la creation de la clé IPC \n");
-            exit(-1);
+            return -1;
         }
 
         //set-up the mq FIFO
         p_context->message_queue_id = msgget(p_context->shared_key,IPC_CREAT | 0666);
         if(p_context->message_queue_id == -1){
             perror("Erreur lors de la création de la file de message \n");
-            exit(-1);
+            return -1;
         }
-
+        p_context->main_process_pid = getpid();
         //set-up source / destination lister_pid to 0
         p_context->source_lister_pid = 0;
         p_context->destination_lister_pid = 0;
         p_context->processes_count = 0;
-        p_context->main_process_pid = getpid();
     }
     return 0;
 }
@@ -90,8 +89,8 @@ int make_process(process_context_t *p_context, process_loop_t func, void *parame
                     free(analyzer_config);
                 }
             }
-            return child_pid;
         }
+        return child_pid
     }
 }
 
@@ -102,6 +101,27 @@ int make_process(process_context_t *p_context, process_loop_t func, void *parame
 void lister_process_loop(void *parameters) {
     if(parameters){
         lister_configuration_t *lister_config = (lister_configuration_t *) parameters;
+        //attente de reception du message d'analyse de repertoire
+        analyze_dir_command_t dir_message;
+        memset(&dir_message,0, sizeof(analyze_dir_command_t));
+        if(msgrcv(lister_config->my_receiver_id,&dir_message, sizeof(analyze_dir_command_t),COMMAND_CODE_ANALYZE_DIR,0) == -1){
+            perror("Erreur lors de la reception du message");
+            exit(EXIT_FAILURE);
+        }
+        //creation d'une liste de fichier + remplissages du path_name de chaque element
+        files_list_t  build_list;
+        //envoye des n premiers elements de la liste vers les n analyzeurs
+        //boucle infinie
+        //transmission des entrées à jour au main process
+        //fin du processus
+        simple_command_t end_message;
+        memset(&end_message,0, sizeof(simple_command_t));
+        if(msgrcv(lister_config->my_receiver_id,&end_message, sizeof(simple_command_t),COMMAND_CODE_TERMINATE,0) == -1){
+            perror("Erreur lors de la reception du message");
+            exit(EXIT_FAILURE);
+        }
+        // send code TERMINATE_OK au main
+        send_terminate_confirm(lister_config->my_recipient_id,COMMAND_CODE_TERMINATE_OK);
     }
 }
 
@@ -112,6 +132,62 @@ void lister_process_loop(void *parameters) {
 void analyzer_process_loop(void *parameters) {
     if(parameters){
         analyzer_configuration_t *analyzer_config = (analyzer_configuration_t *) parameters;
+        //declaration des variables recevant les messages
+        simple_command_t end_message;
+        memset(&end_message,0, sizeof(simple_command_t));
+        analyze_dir_command_t dir_message;
+        memset(&dir_message,0, sizeof(analyze_dir_command_t));
+        analyze_file_command_t file_message;
+        memset(&file_message,0, sizeof(analyze_file_command_t));
+
+        //boucle infini
+        while(1){
+            //gestion message de terminaison
+            int end_result = msgrcv(analyzer_config->my_receiver_id,&end_message, sizeof(simple_command_t),COMMAND_CODE_TERMINATE,IPC_NOWAIT);
+            if(end_result == -1){
+                if(errno == ENOMSG){
+                    // attendre 1000 mili seconde
+                    usleep(100000);
+                }else{
+                    perror("Erreur lors de la lecture du message");
+                    exit(EXIT_FAILURE);
+                }
+            }else{
+                // message de terminaison reçu
+                break;
+            }
+
+            //gestion message d'analyse fichier / dossier
+            int dir_result = msgrcv(analyzer_config->my_receiver_id,&dir_message, sizeof(analyze_dir_command_t),COMMAND_CODE_ANALYZE_DIR,IPC_NOWAIT);
+            if(dir_result == -1){
+                if(errno == ENOMSG){
+                    // attendre 1000 mili seconde
+                    usleep(100000);
+                }else{
+                    perror("Erreur lors de la lecture du message");
+                    exit(EXIT_FAILURE);
+                }
+            }else {
+                // message d'analyse de repertoire reçu -> tratement
+                break;
+            }
+            int file_result = msgrcv(analyzer_config->my_receiver_id,&file_message, sizeof(analyze_file_command_t),COMMAND_CODE_ANALYZE_FILE,IPC_NOWAIT);
+            if(file_result == -1){
+                if(errno == ENOMSG){
+                    // attendre 1000 mili seconde
+                    usleep(100000);
+                }else{
+                    perror("Erreur lors de la lecture du message");
+                    exit(EXIT_FAILURE);
+                }
+            }else{
+                // message d'analyse de fichier reçu -> tratement
+                break;
+            }
+        }
+
+        // send code TERMINATE_OK au main
+        send_terminate_confirm(analyzer_config->my_recipient_id,COMMAND_CODE_TERMINATE_OK);
     }
 }
 
@@ -121,23 +197,28 @@ void analyzer_process_loop(void *parameters) {
  * @param p_context is a pointer to the processes context
  */
 void clean_processes(configuration_t *the_config, process_context_t *p_context) {
+    // Do nothing if not parallel
     if(the_config->is_parallel){
+        // Send terminate
         //envoye des messages de terminaison des processus fils
         send_terminate_command(p_context->message_queue_id,p_context->source_lister_pid);
         send_terminate_command(p_context->message_queue_id,p_context->destination_lister_pid);
         simple_command_t end_message;
         memset(&end_message,0, sizeof(simple_command_t));
 
+        // Wait for responses
         //Attente de la reception du message de comfirmation de terminaison des processus fils
         if(msgrcv(p_context->message_queue_id,&end_message, sizeof(simple_command_t),COMMAND_CODE_TERMINATE_OK,0) == -1){
             perror("Erreur lors de la reception du message de terminaison ");
             exit(EXIT_FAILURE);
         }
 
+        // Free allocated memory
         //Libération de la mémoire allouer
         free(p_context->destination_analyzers_pids);
         free(p_context->source_analyzers_pids);
 
+        // Free the MQ
         //Destruction de la file de message
         if(msgctl(p_context->message_queue_id,IPC_RMID,NULL) == -1){
             perror("Erreur durant la suppression de la file de message");
@@ -145,9 +226,7 @@ void clean_processes(configuration_t *the_config, process_context_t *p_context) 
         }
         free(p_context);
     }
-    // Do nothing if not parallel
-    // Send terminate
-    // Wait for responses
-    // Free allocated memory
-    // Free the MQ
+}
+void request_element_details(int msg_queue, files_list_entry_t *entry, lister_configuration_t *cfg, int *current_analyzers){
+
 }
