@@ -22,7 +22,7 @@ int send_file_entry(int msg_queue, int recipient, files_list_entry_t *file_entry
     msg.payload = *file_entry;
     msg.reply_to = msg_queue;
     size_t msg_length = sizeof(files_list_entry_transmit_t) - sizeof(long);
-    return msgsnd(msg_queue, &msg, msg_length, IPC_NOWAIT);
+    return msgsnd(msg_queue, &msg, msg_length, 0);
 }
 
 /*!
@@ -39,7 +39,7 @@ int send_analyze_dir_command(int msg_queue, int recipient, char *target_dir) {
     strcpy(dir_command.target,target_dir);
     size_t msg_length = sizeof(analyze_dir_command_t) - sizeof(long);
 
-    return msgsnd(msg_queue, &dir_command, msg_length, IPC_NOWAIT);
+    return msgsnd(msg_queue, &dir_command, msg_length, 0);
 }
 
 // The 3 following functions are one-liners
@@ -91,7 +91,7 @@ int send_list_end(int msg_queue, int recipient) {
     end_message.mtype = recipient;
     end_message.message = COMMAND_CODE_LIST_COMPLETE;
     size_t msg_length = sizeof(simple_command_t) - sizeof(long);
-    return msgsnd(msg_queue,&end_message,msg_length,IPC_NOWAIT);
+    return msgsnd(msg_queue,&end_message,msg_length,0);
 }
 
 /*!
@@ -105,7 +105,7 @@ int send_terminate_command(int msg_queue, int recipient) {
     terminate_message.mtype = recipient;
     terminate_message.message = COMMAND_CODE_TERMINATE;
     size_t msg_length = sizeof(simple_command_t) - sizeof(long);
-    return msgsnd(msg_queue,&terminate_message,msg_length,IPC_NOWAIT);
+    return msgsnd(msg_queue,&terminate_message,msg_length,0);
 }
 
 /*!
@@ -120,5 +120,5 @@ int send_terminate_confirm(int msg_queue, int recipient) {
     confirm_message.message = COMMAND_CODE_TERMINATE_OK;
     size_t msg_length = sizeof(simple_command_t) - sizeof(long);
 
-    return msgsnd(msg_queue,&confirm_message,msg_length,IPC_NOWAIT);
+    return msgsnd(msg_queue,&confirm_message,msg_length,0);
 }

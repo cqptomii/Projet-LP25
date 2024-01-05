@@ -21,23 +21,69 @@ int prepare(configuration_t *the_config, process_context_t *p_context) {
         return 0;
     }else{
         //create mq_key
+        if(the_config->verbose){
+            printf("Création de la clé IPC \n");
+        }
         p_context->shared_key = ftok("mq_key.txt", MQ_KEY_CREATE_ID);
         if(p_context->shared_key == -1 ){
             perror("Erreur lors de la creation de la clé IPC \n");
             return -1;
         }
 
-        //set-up the mq FIFO
+        //set-up the main mq FIFO
+        if(the_config->verbose){
+            printf("Création de la file de message \n");
+        }
         p_context->message_queue_id = msgget(p_context->shared_key,IPC_CREAT | 0666);
         if(p_context->message_queue_id == -1){
             perror("Erreur lors de la création de la file de message \n");
             return -1;
         }
         p_context->main_process_pid = getpid();
+        p_context->processes_count = the_config->processes_count;
+
+        //allocation des tableau d'analyzer
+        p_context->source_analyzers_pids = (pid_t *) malloc(sizeof(pid_t)*p_context->processes_count);
+        p_context->destination_analyzers_pids = (pid_t *) malloc(sizeof(pid_t)*p_context->processes_count);
+
         //set-up source / destination lister_pid to 0
-        p_context->source_lister_pid = 0;
-        p_context->destination_lister_pid = 0;
-        p_context->processes_count = 0;
+        lister_configuration_t lister = {0,p_context->message_queue_id,p_context->processes_count,p_context->shared_key};
+        analyzer_configuration_t analyzer = {0,p_context->message_queue_id,p_context->shared_key,the_config->uses_md5};
+        void *parameter = &lister;
+        if(the_config->verbose){
+            printf("création des processus lister source et destination \n");
+        }
+        lister.my_recipient_id = MSG_TYPE_TO_SOURCE_LISTER;
+        p_context->source_lister_pid = make_process(p_context,lister_process_loop,parameter);
+        if(p_context->source_lister_pid <=0){
+            perror("Erreur lors de la creation du processus lister");
+            return -1;
+        }
+        lister.my_recipient_id = MSG_TYPE_TO_DESTINATION_LISTER;
+        p_context->destination_lister_pid = make_process(p_context,lister_process_loop,parameter);
+        if(p_context->destination_lister_pid <=0){
+            perror("Erreur lors de la creation du processus lister");
+            return -1;
+        }
+
+        parameter = &analyzer;
+        if(the_config->verbose){
+            printf("Création des processus analyzer source et destination \n");
+        }
+        for(int i = 0; i< p_context->processes_count;i++){
+            analyzer.my_recipient_id = MSG_TYPE_TO_SOURCE_ANALYZERS;
+            p_context->source_analyzers_pids[i] = make_process(p_context,analyzer_process_loop,parameter);
+            if(p_context->source_analyzers_pids[i] <= 0){
+                perror("Erreur lors de la creation du processus analyzer");
+                return -1;
+            }
+            analyzer.my_recipient_id = MSG_TYPE_TO_DESTINATION_ANALYZERS;
+            p_context->destination_analyzers_pids[i] = make_process(p_context,analyzer_process_loop,parameter);
+            if(p_context->destination_analyzers_pids[i] <= 0){
+                perror("Erreur lors de la creation du processus analyzer");
+                return -1;
+            }
+        }
     }
     return 0;
 }
@@ -57,41 +103,17 @@ int make_process(process_context_t *p_context, process_loop_t func, void *parame
         perror("Erreur lors de la création du processus");
         return -1;
     }
-
     if (child_pid == 0) {
         // Dans le processus enfant, on exécute la fonction spécifiée par func avec les paramètres fournis
         if(func == lister_process_loop  || func == analyzer_process_loop ) {
             func(parameters);
+            exit(EXIT_SUCCESS);
+        }else{
+            exit(EXIT_FAILURE);
         }
     }else {
-        // Dans le processus parent, on stock le PID du processus enfant dans p_context->source_lister_pid et *source_analyzers_pids
-        if (p_context != NULL && p_context->processes_count > 0) {
-            if (func == lister_process_loop) {
-                lister_configuration_t *lister_config = (lister_configuration_t *) parameters;
-                if(lister_config->my_recipient_id == MSG_TYPE_TO_SOURCE_LISTER){
-                    p_context->source_lister_pid = child_pid;
-                }
-                if(lister_config->my_recipient_id == MSG_TYPE_TO_DESTINATION_LISTER){
-                    p_context->destination_lister_pid = child_pid;
-                }
-                free(lister_config);
-            } else if (func == analyzer_process_loop) {
-                if (p_context->source_analyzers_pids != NULL && p_context->processes_count > 0) {
-                    analyzer_configuration_t *analyzer_config = (analyzer_configuration_t *) parameters;
-                    if(analyzer_config->my_recipient_id == MSG_TYPE_TO_SOURCE_ANALYZERS) {
-                        p_context->source_analyzers_pids[p_context->processes_count] = child_pid;
-                        p_context->processes_count++;
-                    }
-                    if(analyzer_config->my_recipient_id == MSG_TYPE_TO_DESTINATION_ANALYZERS){
-                        p_context->destination_analyzers_pids[p_context->processes_count] = child_pid;
-                        p_context->processes_count++;
-                    }
-                    free(analyzer_config);
-                }
-            }
-        }
+        return child_pid;
     }
-    return child_pid;
 }
 
 /*!
@@ -121,7 +143,7 @@ void lister_process_loop(void *parameters) {
             exit(EXIT_FAILURE);
         }
         // send code TERMINATE_OK au main
-        send_terminate_confirm(lister_config->my_recipient_id,COMMAND_CODE_TERMINATE_OK);
+        send_terminate_confirm(lister_config->my_recipient_id,MSG_TYPE_TO_MAIN);
     }
 }
 
@@ -187,7 +209,7 @@ void analyzer_process_loop(void *parameters) {
         }
 
         // send code TERMINATE_OK au main
-        send_terminate_confirm(analyzer_config->my_recipient_id,COMMAND_CODE_TERMINATE_OK);
+        send_terminate_confirm(analyzer_config->my_recipient_id,MSG_TYPE_TO_MAIN);
     }
 }
 
@@ -199,25 +221,24 @@ void analyzer_process_loop(void *parameters) {
 void clean_processes(configuration_t *the_config, process_context_t *p_context) {
     // Do nothing if not parallel
     if(the_config->is_parallel){
+        int count_terminate_message = 0;
         simple_command_t end_message;
-        memset(&end_message,0, sizeof(simple_command_t));
         // Send terminate
         //envoye des messages de terminaison des processus fils
-        send_terminate_command(p_context->message_queue_id,p_context->source_lister_pid);
+        send_terminate_command(p_context->message_queue_id,MSG_TYPE_TO_SOURCE_LISTER);
+        send_terminate_command(p_context->message_queue_id,MSG_TYPE_TO_DESTINATION_LISTER);
+        send_terminate_command(p_context->message_queue_id,MSG_TYPE_TO_SOURCE_ANALYZERS);
+        send_terminate_command(p_context->message_queue_id,MSG_TYPE_TO_DESTINATION_ANALYZERS);
         // Wait for responses
         //Attente de la reception du message de comfirmation de terminaison des processus fils
-        if(msgrcv(p_context->message_queue_id,&end_message, sizeof(simple_command_t),COMMAND_CODE_TERMINATE_OK,0) == -1){
-            perror("Erreur lors de la reception du message de terminaison ");
-            exit(EXIT_FAILURE);
+        while(count_terminate_message != 4){
+            memset(&end_message,0, sizeof(simple_command_t));
+            if(msgrcv(p_context->message_queue_id,&end_message, sizeof(simple_command_t),COMMAND_CODE_TERMINATE_OK,0) == -1){
+                perror("Erreur lors de la reception du message de terminaison ");
+                exit(EXIT_FAILURE);
+            }
+            ++count_terminate_message;
         }
-
-        memset(&end_message,0, sizeof(simple_command_t));
-        send_terminate_command(p_context->message_queue_id,p_context->destination_lister_pid);
-        if(msgrcv(p_context->message_queue_id,&end_message, sizeof(simple_command_t),COMMAND_CODE_TERMINATE_OK,0) == -1){
-            perror("Erreur lors de la reception du message de terminaison ");
-            exit(EXIT_FAILURE);
-        }
-
         // Free allocated memory
         //Libération de la mémoire allouer
         free(p_context->destination_analyzers_pids);
