@@ -35,6 +35,8 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
     difference.head=NULL;
     difference.tail=NULL;
     if(the_config->is_parallel){
+        bool lister_source = true;
+        bool lister_dest = true;
         //envoie des commandes de listages de repertoires au deux listeurs
         send_analyze_dir_command(p_context->message_queue_id,MSG_TYPE_TO_SOURCE_LISTER,the_config->source);
         send_analyze_dir_command(p_context->message_queue_id,MSG_TYPE_TO_DESTINATION_LISTER,the_config->destination);
@@ -42,9 +44,30 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
         memset(&end_message,0, sizeof(simple_command_t));
         //boucle infini
         while(1){
-
+            //attente d'entrée de liste de fichier à ajouter
             //gestion des message de fin de list -> sortie de la boucle
+            int end_result = msgrcv(p_context->message_queue_id,&end_message, sizeof(simple_command_t),COMMAND_CODE_LIST_COMPLETE,IPC_NOWAIT);
+            if(end_result == -1){
+                if(errno == ENOMSG){
+                    // attendre 1000 mili seconde
+                    usleep(100000);
+                }else{
+                    perror("Erreur lors de la lecture du message");
+                    exit(EXIT_FAILURE);
+                }
+            }else{
+                if(end_message.mtype == MSG_TYPE_TO_SOURCE_LISTER){
+                    lister_source = false;
+                }
+                if(end_message.mtype == MSG_TYPE_TO_DESTINATION_LISTER){
+                    lister_dest = false;
+                }
+                if(!lister_source && !lister_dest){
+                    break;
+                }
+            }
         }
+        /*
         if(the_config->verbose) {
             printf("Build file list on target : %s  | ",the_config->source);
         }
@@ -60,7 +83,7 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
         }
         if(the_config->verbose){
             printf("\n\n");
-        }
+        }*/
     }
     else{
         //Build source / destination / difference
@@ -84,65 +107,68 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
         if(the_config->verbose){
             printf("\n\n");
         }
-        files_list_entry_t *cmp_source = source.head;
-        files_list_entry_t *cmp_destination;
-        if(the_config->verbose){
-            printf("Source and destination comparaison \n");
-        }
-        while(cmp_source){
-            if(destination.head) {
-                cmp_destination=find_entry_by_name(&destination, cmp_source->path_and_name, strlen(the_config->source), strlen(the_config->destination));
-                if (!cmp_destination) {
-                    if(the_config->verbose){
-                        printf("Add file %s to difference \n",cmp_source->path_and_name);
-                    }
-                    add_file_entry(&difference, cmp_source->path_and_name);
-                }else{
-                    if(the_config->verbose) {
-                        printf(" Verification of files differences : ");
-                    }
-                    if (mismatch(cmp_source, cmp_destination, the_config->uses_md5)) {
-                        if(the_config->verbose) {
-                            printf(" DIFFERENT \n");
-                        }
-                        add_file_entry(&difference, cmp_source->path_and_name);
-                        if(the_config->verbose){
-                            printf("Add file %s to difference \n",cmp_source->path_and_name);
-                        }
-                    }
-                    if(the_config->verbose) {
-                        printf(" EQUAL \n");
-                    }
-                }
-            }else{
-                add_file_entry(&difference,cmp_source->path_and_name);
+    }
+    // build file list difference
+    files_list_entry_t *cmp_source = source.head;
+    files_list_entry_t *cmp_destination;
+    if(the_config->verbose){
+        printf("Source and destination comparaison \n");
+    }
+    while(cmp_source){
+        if(destination.head) {
+            cmp_destination=find_entry_by_name(&destination, cmp_source->path_and_name, strlen(the_config->source), strlen(the_config->destination));
+            if (!cmp_destination) {
                 if(the_config->verbose){
                     printf("Add file %s to difference \n",cmp_source->path_and_name);
                 }
+                add_file_entry(&difference, cmp_source->path_and_name);
+            }else{
+                if(the_config->verbose) {
+                    printf(" Verification of files differences : ");
+                }
+                if (mismatch(cmp_source, cmp_destination, the_config->uses_md5)) {
+                    if(the_config->verbose) {
+                        printf(" DIFFERENT \n");
+                    }
+                    add_file_entry(&difference, cmp_source->path_and_name);
+                    if(the_config->verbose){
+                        printf("Add file %s to difference \n",cmp_source->path_and_name);
+                    }
+                }
+                if(the_config->verbose) {
+                    printf(" EQUAL \n");
+                }
             }
-            cmp_source=cmp_source->next;
-        }
-        make_files_list(&difference,NULL);
-        if (the_config->verbose) {
-            display_files_list(&difference);
-        }
-        // Apply difference into destination
-        files_list_entry_t *cmp_difference = difference.head;
-        if(!the_config->dry_run) {
-            while (cmp_difference) {
-                copy_entry_to_destination(cmp_difference, the_config);
-                cmp_difference = cmp_difference->next;
+        }else{
+            add_file_entry(&difference,cmp_source->path_and_name);
+            if(the_config->verbose){
+                printf("Add file %s to difference \n",cmp_source->path_and_name);
             }
         }
-        if(the_config->verbose) {
-            printf(" clear files lists  : ");
+        cmp_source=cmp_source->next;
+    }
+    make_files_list(&difference,NULL);
+    if (the_config->verbose) {
+        display_files_list(&difference);
+    }
+    if(the_config->verbose){
+        printf("|| Copy file difference || \n");
+    }
+    files_list_entry_t *cmp_difference = difference.head;
+    if(!the_config->dry_run) {
+        while (cmp_difference) {
+            copy_entry_to_destination(cmp_difference, the_config);
+            cmp_difference = cmp_difference->next;
         }
-        clear_files_list(&difference);
-        clear_files_list(&source);
-        clear_files_list(&destination);
-        if(the_config->verbose) {
-            printf(" End \n");
-        }
+    }
+    if(the_config->verbose) {
+        printf(" clear files lists  : ");
+    }
+    clear_files_list(&difference);
+    clear_files_list(&source);
+    clear_files_list(&destination);
+    if(the_config->verbose) {
+        printf(" End \n");
     }
     return;
 }

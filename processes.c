@@ -22,7 +22,7 @@ int prepare(configuration_t *the_config, process_context_t *p_context) {
     }else{
         //create mq_key
         if(the_config->verbose){
-            printf("Création de la clé IPC \n");
+            printf("Creating MQ shared key \n");
         }
         p_context->shared_key = ftok("mq_key.txt", MQ_KEY_CREATE_ID);
         if(p_context->shared_key == -1 ){
@@ -32,7 +32,7 @@ int prepare(configuration_t *the_config, process_context_t *p_context) {
 
         //set-up the main mq FIFO
         if(the_config->verbose){
-            printf("Création de la file de message \n");
+            printf("Creating message FIFO \n");
         }
         p_context->message_queue_id = msgget(p_context->shared_key,IPC_CREAT | 0666);
         if(p_context->message_queue_id == -1){
@@ -51,7 +51,7 @@ int prepare(configuration_t *the_config, process_context_t *p_context) {
         analyzer_configuration_t analyzer = {0,p_context->message_queue_id,p_context->shared_key,the_config->uses_md5};
         void *parameter = &lister;
         if(the_config->verbose){
-            printf("création des processus lister source et destination \n");
+            printf("Creation of source / destination lister process\n");
         }
         lister.my_recipient_id = MSG_TYPE_TO_SOURCE_LISTER;
         p_context->source_lister_pid = make_process(p_context,lister_process_loop,parameter);
@@ -68,7 +68,7 @@ int prepare(configuration_t *the_config, process_context_t *p_context) {
 
         parameter = &analyzer;
         if(the_config->verbose){
-            printf("Création des processus analyzer source et destination \n");
+            printf("Creation of source / destination analyzer process \n");
         }
         for(int i = 0; i< p_context->processes_count;i++){
             analyzer.my_recipient_id = MSG_TYPE_TO_SOURCE_ANALYZERS;
@@ -143,7 +143,7 @@ void lister_process_loop(void *parameters) {
             exit(EXIT_FAILURE);
         }
         // send code TERMINATE_OK au main
-        send_terminate_confirm(lister_config->my_recipient_id,MSG_TYPE_TO_MAIN);
+        send_terminate_confirm(lister_config->my_recipient_id,lister_config->my_recipient_id);
     }
 }
 
@@ -209,7 +209,7 @@ void analyzer_process_loop(void *parameters) {
         }
 
         // send code TERMINATE_OK au main
-        send_terminate_confirm(analyzer_config->my_recipient_id,MSG_TYPE_TO_MAIN);
+        send_terminate_confirm(analyzer_config->my_recipient_id,analyzer_config->my_recipient_id);
     }
 }
 
@@ -221,7 +221,10 @@ void analyzer_process_loop(void *parameters) {
 void clean_processes(configuration_t *the_config, process_context_t *p_context) {
     // Do nothing if not parallel
     if(the_config->is_parallel){
-        int count_terminate_message = 0;
+        bool lister_source = true;
+        bool lister_dest = true;
+        bool analyzer_source = true;
+        bool analyzer_dest = true;
         simple_command_t end_message;
         // Send terminate
         //envoye des messages de terminaison des processus fils
@@ -231,13 +234,26 @@ void clean_processes(configuration_t *the_config, process_context_t *p_context) 
         send_terminate_command(p_context->message_queue_id,MSG_TYPE_TO_DESTINATION_ANALYZERS);
         // Wait for responses
         //Attente de la reception du message de comfirmation de terminaison des processus fils
-        while(count_terminate_message != 4){
+        while(lister_dest && lister_source && analyzer_dest && analyzer_source){
             memset(&end_message,0, sizeof(simple_command_t));
             if(msgrcv(p_context->message_queue_id,&end_message, sizeof(simple_command_t),COMMAND_CODE_TERMINATE_OK,0) == -1){
                 perror("Erreur lors de la reception du message de terminaison ");
                 exit(EXIT_FAILURE);
             }
-            ++count_terminate_message;
+            switch (end_message.mtype) {
+                case MSG_TYPE_TO_SOURCE_LISTER:
+                    lister_source = false;
+                    break;
+                case MSG_TYPE_TO_DESTINATION_LISTER:
+                    lister_dest = false;
+                    break;
+                case MSG_TYPE_TO_SOURCE_ANALYZERS:
+                    analyzer_source = false;
+                    break;
+                case MSG_TYPE_TO_DESTINATION_ANALYZERS:
+                    analyzer_dest = false;
+                    break;
+            }
         }
         // Free allocated memory
         //Libération de la mémoire allouer
