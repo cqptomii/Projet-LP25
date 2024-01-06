@@ -271,13 +271,19 @@ void clean_processes(configuration_t *the_config, process_context_t *p_context) 
         simple_command_t end_message;
         // Send terminate
         //envoye des messages de terminaison des processus fils
+	if(the_config->verbose){
+            printf("Send terminate command to lister and analyzer \n");
+        }
         send_terminate_command(p_context->message_queue_id,MSG_TYPE_TO_SOURCE_LISTER);
         send_terminate_command(p_context->message_queue_id,MSG_TYPE_TO_DESTINATION_LISTER);
         send_terminate_command(p_context->message_queue_id,MSG_TYPE_TO_SOURCE_ANALYZERS);
         send_terminate_command(p_context->message_queue_id,MSG_TYPE_TO_DESTINATION_ANALYZERS);
         // Wait for responses
         //Attente de la reception du message de comfirmation de terminaison des processus fils
-        while(count_lister_end < 4){
+	if(the_config->verbose){
+            printf("Wait until receive terminate confirm command from lister and analyzer \n");
+        }        
+	while(count_lister_end < 4){
             memset(&end_message,0, sizeof(simple_command_t));
             if(msgrcv(p_context->message_queue_id,&end_message, sizeof(simple_command_t),COMMAND_CODE_TERMINATE_OK,0) == -1){
                 perror("Erreur lors de la reception du message de terminaison ");
@@ -287,16 +293,25 @@ void clean_processes(configuration_t *the_config, process_context_t *p_context) 
         }
         // Free allocated memory
         //Libération de la mémoire allouer
+	if(the_config->verbose){
+            printf("Free allocated memory \n");
+        }
         free(p_context->destination_analyzers_pids);
         free(p_context->source_analyzers_pids);
 
         // Free the MQ
         //Destruction de la file de message
+	if (the_config->verbose){
+            printf("Message queue destruction \n");
+        }
         if(msgctl(p_context->message_queue_id,IPC_RMID,NULL) == -1){
             perror("Erreur durant la suppression de la file de message");
             exit(EXIT_FAILURE);
         }
         free(p_context);
+	if(the_config->verbose){
+            printf("Clean END \n");
+        }
     }
 }
 void request_element_details(int msg_queue, files_list_entry_t *entry, lister_configuration_t *cfg, int *current_analyzers){

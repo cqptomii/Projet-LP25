@@ -37,12 +37,21 @@ int main(int argc, char *argv[]) {
 
     // Prepare (fork, MQ) if parallel
     process_context_t processes_context;
+    if(my_config.verbose){
+        printf(" Prepare processes and Messages queue \n");
+    }
     prepare(&my_config, &processes_context);
 
     // Run synchronize:
+    if(my_config.verbose){
+        printf(" Run Synchronize \n");
+    }
     synchronize(&my_config, &processes_context);
     
     // Clean resources
+    if(my_config.verbose){
+        printf(" Processes clean \n");
+    }
     clean_processes(&my_config, &processes_context);
     return 0;
 }

@@ -25,6 +25,9 @@
  */
 void synchronize(configuration_t *the_config, process_context_t *p_context) {
     // Init list
+    if (the_config->verbose){
+        printf(" Source / Destination list init \n");
+    }
     files_list_t source;
     source.head=NULL;
     source.tail=NULL;
@@ -38,13 +41,19 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
         bool lister_source = true;
         bool lister_dest = true;
         //envoie des commandes de listages de repertoires au deux listeurs
-        send_analyze_dir_command(p_context->message_queue_id,MSG_TYPE_TO_SOURCE_LISTER,the_config->source);
+	if(the_config->verbose){
+            printf("Send analyze directory command to listers \n");
+        }        
+	send_analyze_dir_command(p_context->message_queue_id,MSG_TYPE_TO_SOURCE_LISTER,the_config->source);
         send_analyze_dir_command(p_context->message_queue_id,MSG_TYPE_TO_DESTINATION_LISTER,the_config->destination);
 
         simple_command_t end_message;
         memset(&end_message,0, sizeof(simple_command_t));
         //boucle infini
-        while(1){
+	if(the_config->verbose) {
+            printf("Build file lists on target, source : %s , destination : %s |  \n",the_config->source,the_config->destination);
+        }        
+	while(1){
             //attente d'entrée de liste de fichier à ajouter
             //gestion des message de fin de list -> sortie de la boucle
             int end_result = msgrcv(p_context->message_queue_id,&end_message, sizeof(simple_command_t),COMMAND_CODE_LIST_COMPLETE,IPC_NOWAIT);
