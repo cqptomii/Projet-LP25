@@ -146,10 +146,36 @@ void lister_process_loop(void *parameters) {
         }
         //boucle infinie
         bool running = true;
+        files_list_t complete_list;
+        files_list_entry_transmit_t receipt_entry;
+        memset(&receipt_entry,0, sizeof(files_list_entry_transmit_t));
         while(current_entry != NULL && running){
             //reception des reponses des analyzer -> envoye de la prochaine entry
+            if(msgrcv(lister_config->my_receiver_id,&receipt_entry, sizeof(files_list_entry_transmit_t),COMMAND_CODE_FILE_ANALYZED,0) == -1){
+                perror("Erreur lors de la lecture du message");
+                exit(EXIT_FAILURE);
+            }
+            //stockage de l'entrée reçu
+            add_entry_to_tail(complete_list,receipt_entry.payload);
+            --file_send;
+            if(current_entry != NULL) {
+                send_analyze_file_command(lister_config->my_receiver_id, COMMAND_CODE_ANALYZE_FILE, current_entry);
+                current_entry = current_entry->next;
+                ++file_send;
+            }
+            if(file_send == 0){
+                running = false;
+            }
         }
-        //transmission des entrées à jour au main process
+        current_entry = complete_list.head
+        clear_files_list(&build_list);
+        //envoye du message de fin de completion de liste
+        send_list_end(lister_config->my_receiver_id,MSG_TYPE_TO_MAIN);
+        //transmission des entrées à jour au main process une par une
+        while(current_entry != NULL){
+            send_files_list_element(lister_config->my_receiver_id,MSG_TYPE_TO_MAIN,current_entry);
+            current_entry = current_entry->next;
+        }
         //fin du processus
         simple_command_t end_message;
         memset(&end_message,0, sizeof(simple_command_t));
@@ -158,7 +184,7 @@ void lister_process_loop(void *parameters) {
             exit(EXIT_FAILURE);
         }
         // send code TERMINATE_OK au main
-        send_terminate_confirm(lister_config->my_recipient_id,lister_config->my_recipient_id);
+        send_terminate_confirm(lister_config->my_receiver_id,MSG_TYPE_TO_MAIN);
     }
 }
 
@@ -206,7 +232,7 @@ void analyzer_process_loop(void *parameters) {
                 }
             }else {
                 // message d'analyse de repertoire reçu -> tratement
-                send_analyze_dir_command(analyzer_config->my_receiver_id,analyzer_config->my_recipient_id,dir_message.target);
+                send_analyze_dir_command(analyzer_config->my_receiver_id,COMMAND_CODE_FILE_ANALYZED,dir_message.target);
                 break;
             }
             int file_result = msgrcv(analyzer_config->my_receiver_id,&file_message, sizeof(analyze_file_command_t),COMMAND_CODE_ANALYZE_FILE,IPC_NOWAIT);
@@ -223,13 +249,13 @@ void analyzer_process_loop(void *parameters) {
                 files_list_entry_t *entry = &file_message.payload;
                 get_file_stats(entry);
                 //send response
-                send_analyze_file_response(analyzer_config->my_receiver_id,analyzer_config->my_recipient_id,entry);
+                send_analyze_file_response(analyzer_config->my_receiver_id,COMMAND_CODE_FILE_ANALYZED,entry);
                 break;
             }
         }
 
         // send code TERMINATE_OK au main
-        send_terminate_confirm(analyzer_config->my_recipient_id,analyzer_config->my_recipient_id);
+        send_terminate_confirm(analyzer_config->my_receiver_id,MSG_TYPE_TO_MAIN);
     }
 }
 
@@ -251,7 +277,7 @@ void clean_processes(configuration_t *the_config, process_context_t *p_context) 
         send_terminate_command(p_context->message_queue_id,MSG_TYPE_TO_DESTINATION_ANALYZERS);
         // Wait for responses
         //Attente de la reception du message de comfirmation de terminaison des processus fils
-        while(lister_dest && lister_source && analyzer_dest && analyzer_source){
+        while(count_lister_end < 4){
             memset(&end_message,0, sizeof(simple_command_t));
             if(msgrcv(p_context->message_queue_id,&end_message, sizeof(simple_command_t),COMMAND_CODE_TERMINATE_OK,0) == -1){
                 perror("Erreur lors de la reception du message de terminaison ");
