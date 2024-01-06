@@ -40,6 +40,7 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
         //envoie des commandes de listages de repertoires au deux listeurs
         send_analyze_dir_command(p_context->message_queue_id,MSG_TYPE_TO_SOURCE_LISTER,the_config->source);
         send_analyze_dir_command(p_context->message_queue_id,MSG_TYPE_TO_DESTINATION_LISTER,the_config->destination);
+
         simple_command_t end_message;
         memset(&end_message,0, sizeof(simple_command_t));
         //boucle infini
