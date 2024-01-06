@@ -132,8 +132,23 @@ void lister_process_loop(void *parameters) {
         }
         //creation d'une liste de fichier + remplissages du path_name de chaque element
         files_list_t  build_list;
+        make_list(&build_list,dir_message.target);
+        int file_send = 0;
+        files_list_entry_t *current_entry = build_list.head;
         //envoye des n premiers elements de la liste vers les n analyzeurs
+        while(current_entry != NULL &&  file_send < lister_config->analyzers_count){
+            //analyze file
+            request_element_details(lister_config->my_receiver_id,current_entry,lister_config,&file_send);
+
+            //get next entry
+            current_entry = current_entry->next;
+            ++file_send;
+        }
         //boucle infinie
+        bool running = true;
+        while(current_entry != NULL && running){
+            //reception des reponses des analyzer -> envoye de la prochaine entry
+        }
         //transmission des entrées à jour au main process
         //fin du processus
         simple_command_t end_message;
@@ -191,6 +206,7 @@ void analyzer_process_loop(void *parameters) {
                 }
             }else {
                 // message d'analyse de repertoire reçu -> tratement
+                send_analyze_dir_command(analyzer_config->my_receiver_id,analyzer_config->my_recipient_id,dir_message.target);
                 break;
             }
             int file_result = msgrcv(analyzer_config->my_receiver_id,&file_message, sizeof(analyze_file_command_t),COMMAND_CODE_ANALYZE_FILE,IPC_NOWAIT);
@@ -203,7 +219,11 @@ void analyzer_process_loop(void *parameters) {
                     exit(EXIT_FAILURE);
                 }
             }else{
-                // message d'analyse de fichier reçu -> tratement
+                // message d'analyse de fichier reçu -> traitement
+                files_list_entry_t *entry = &file_message.payload;
+                get_file_stats(entry);
+                //send response
+                send_analyze_file_response(analyzer_config->my_receiver_id,analyzer_config->my_recipient_id,entry);
                 break;
             }
         }
@@ -221,10 +241,7 @@ void analyzer_process_loop(void *parameters) {
 void clean_processes(configuration_t *the_config, process_context_t *p_context) {
     // Do nothing if not parallel
     if(the_config->is_parallel){
-        bool lister_source = true;
-        bool lister_dest = true;
-        bool analyzer_source = true;
-        bool analyzer_dest = true;
+        int count_lister_end = 0;
         simple_command_t end_message;
         // Send terminate
         //envoye des messages de terminaison des processus fils
@@ -240,20 +257,7 @@ void clean_processes(configuration_t *the_config, process_context_t *p_context) 
                 perror("Erreur lors de la reception du message de terminaison ");
                 exit(EXIT_FAILURE);
             }
-            switch (end_message.mtype) {
-                case MSG_TYPE_TO_SOURCE_LISTER:
-                    lister_source = false;
-                    break;
-                case MSG_TYPE_TO_DESTINATION_LISTER:
-                    lister_dest = false;
-                    break;
-                case MSG_TYPE_TO_SOURCE_ANALYZERS:
-                    analyzer_source = false;
-                    break;
-                case MSG_TYPE_TO_DESTINATION_ANALYZERS:
-                    analyzer_dest = false;
-                    break;
-            }
+            ++count_lister_end;
         }
         // Free allocated memory
         //Libération de la mémoire allouer
@@ -270,5 +274,5 @@ void clean_processes(configuration_t *the_config, process_context_t *p_context) 
     }
 }
 void request_element_details(int msg_queue, files_list_entry_t *entry, lister_configuration_t *cfg, int *current_analyzers){
-
+    send_analyze_file_command(msg_queue,COMMAND_CODE_ANALYZE_FILE,entry);
 }
