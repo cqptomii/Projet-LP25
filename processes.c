@@ -149,14 +149,14 @@ void lister_process_loop(void *parameters) {
         files_list_t complete_list;
         files_list_entry_transmit_t receipt_entry;
         memset(&receipt_entry,0, sizeof(files_list_entry_transmit_t));
-        while(current_entry != NULL && running){
+        while(current_entry != NULL || running){
             //reception des reponses des analyzer -> envoye de la prochaine entry
             if(msgrcv(lister_config->my_receiver_id,&receipt_entry, sizeof(files_list_entry_transmit_t),COMMAND_CODE_FILE_ANALYZED,0) == -1){
                 perror("Erreur lors de la lecture du message");
                 exit(EXIT_FAILURE);
             }
             //stockage de l'entrée reçu
-            add_entry_to_tail(complete_list,receipt_entry.payload);
+            add_entry_to_tail(&complete_list,&receipt_entry.payload);
             --file_send;
             if(current_entry != NULL) {
                 send_analyze_file_command(lister_config->my_receiver_id, COMMAND_CODE_ANALYZE_FILE, current_entry);
@@ -167,7 +167,7 @@ void lister_process_loop(void *parameters) {
                 running = false;
             }
         }
-        current_entry = complete_list.head
+        current_entry = complete_list.head;
         clear_files_list(&build_list);
         //envoye du message de fin de completion de liste
         send_list_end(lister_config->my_receiver_id,MSG_TYPE_TO_MAIN);
