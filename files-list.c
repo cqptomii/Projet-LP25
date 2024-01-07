@@ -39,34 +39,34 @@ files_list_entry_t *add_file_entry(files_list_t *list, char *file_path) {
         if (!list->head) {
             add_entry_to_tail(list, newel);
             return list->head;
-        }else {
+        } else {
             files_list_entry_t *cmp = list->head;
             int verif_length;
-            while(1){
+            while (1) {
                 verif_length = (int)(strlen(cmp->path_and_name)-strlen(file_path));
-                if(verif_length > 0){
+                if (verif_length > 0) {
                     break;
                 }
-                if(verif_length == 0){
+                if (verif_length == 0) {
                     verif_length = strcmp(cmp->path_and_name,file_path);
-                    if(verif_length > 0 || verif_length == 0){
+                    if (verif_length > 0 || verif_length == 0) {
                         break;
                     }
                 }
-                if(!cmp->next){
+                if (!cmp->next) {
                     break;
                 }
                 cmp=cmp->next;
             }
-            if(verif_length == 0){
+            if (verif_length == 0) {
                 return NULL;
-            }else{
-                if(verif_length > 0) {
-                    if(cmp == list->head){
+            } else {
+                if (verif_length > 0) {
+                    if (cmp == list->head) {
                         newel->next = cmp;
                         cmp->prev = newel;
                         list->head = newel;
-                    }else {
+                    } else {
                         newel->next = cmp;
                         newel->prev = cmp->prev;
                         (cmp->prev)->next = newel;
@@ -75,7 +75,7 @@ files_list_entry_t *add_file_entry(files_list_t *list, char *file_path) {
                     return list->head;
                 }
             }
-            if(!cmp->next){
+            if (!cmp->next) {
                 add_entry_to_tail(list,newel);
                 return list->tail;
             }
@@ -93,20 +93,20 @@ files_list_entry_t *add_file_entry(files_list_t *list, char *file_path) {
  * @return 0 in case of success, -1 else
  */
 int add_entry_to_tail(files_list_t *list, files_list_entry_t *entry) {
-    if(!list){
+    if (!list) {
         return -1;
     }
     if (!list->head) {
         list->head = entry;
         list->tail = entry;
         return 0;
-    }else {
+    } else {
         if (list->head == list->tail) {
             (list->head)->next = entry;
             entry->prev = list->head;
             list->tail = entry;
             return 0;
-        }else {
+        } else {
             entry->prev = list->tail;
             (list->tail)->next = entry;
             list->tail = entry;
@@ -125,16 +125,16 @@ int add_entry_to_tail(files_list_t *list, files_list_entry_t *entry) {
  *  @return a pointer to the element found, NULL if none were found.
  */
 files_list_entry_t *find_entry_by_name(files_list_t *list, char *file_path, size_t start_of_src, size_t start_of_dest) {
-    if(!list || !file_path){
+    if (!list || !file_path) {
         return NULL;
     }
-    if(list->head) {
+    if (list->head) {
         size_t path_len = strlen(file_path) - start_of_src - 1 ;
         //
         files_list_entry_t *cmp = list->head;
         while (cmp) {
             size_t cmp_len = strlen(cmp->path_and_name) - start_of_dest - 1;
-            if (cmp_len == path_len && strncmp(cmp->path_and_name+start_of_dest+1,file_path+start_of_src+1, path_len)==0){
+            if (cmp_len == path_len && strncmp(cmp->path_and_name+start_of_dest+1,file_path+start_of_src+1, path_len)==0) {
                 return cmp;
             }
             cmp = cmp->next;
