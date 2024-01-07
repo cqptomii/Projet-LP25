@@ -45,7 +45,7 @@ void init_configuration(configuration_t *the_config) {
 int set_configuration(configuration_t *the_config, int argc, char *argv[]) {
     // Copy source_dir and destination_dir in the_config
     // Check source_dir , destination_dir existence
-    if(!the_config){
+    if(!the_config) {
         return -1;
     }
     int opt = 0,parameter_count = 0;
@@ -75,7 +75,7 @@ int set_configuration(configuration_t *the_config, int argc, char *argv[]) {
                 ++parameter_count;
                 break;
             case 'n':
-                if(optarg){
+                if(optarg) {
                     the_config->processes_count = (int)strtol(optarg,NULL,10);
                     parameter_count+=2;
                     break;
@@ -89,9 +89,9 @@ int set_configuration(configuration_t *the_config, int argc, char *argv[]) {
                 break;
         }
     }
-    if((argc-parameter_count) < 2){
+    if((argc-parameter_count) < 2) {
         return -1;
-    }else {
+    } else {
         // Copy source_dir and destination_dir in the_config
         strcpy(the_config->source,argv[argc-2]);
         strcpy(the_config->destination,argv[argc-1]);
