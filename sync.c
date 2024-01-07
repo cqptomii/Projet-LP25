@@ -41,27 +41,45 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
         bool lister_source = true;
         bool lister_dest = true;
         //envoie des commandes de listages de repertoires au deux listeurs
-	if (the_config->verbose) {
+	    if (the_config->verbose) {
             printf("Send analyze directory command to listers \n");
         }        
-	send_analyze_dir_command(p_context->message_queue_id,MSG_TYPE_TO_SOURCE_LISTER,the_config->source);
+	    send_analyze_dir_command(p_context->message_queue_id,MSG_TYPE_TO_SOURCE_LISTER,the_config->source);
         send_analyze_dir_command(p_context->message_queue_id,MSG_TYPE_TO_DESTINATION_LISTER,the_config->destination);
 
         simple_command_t end_message;
         memset(&end_message,0, sizeof(simple_command_t));
-	files_list_entry_transmit_t entry_from_lister;
-        memset(&entry_from_lister,0, sizeof(files_list_entry_transmit_t));
+	    files_list_entry_transmit_t entry_from_lister;
         //boucle infini
-	if (the_config->verbose) {
+	    if (the_config->verbose) {
             printf("Build file lists on target, source : %s , destination : %s |  \n",the_config->source,the_config->destination);
-        }        
-	while (1) {
+        }
+	    while (1) {
+            memset(&entry_from_lister,0, sizeof(files_list_entry_transmit_t));
             //attente d'entrée de liste de fichier à ajouter
-            //gestion des message de fin de list -> sortie de la boucle
-            int end_result = msgrcv(p_context->message_queue_id,&end_message, sizeof(simple_command_t),COMMAND_CODE_LIST_COMPLETE,IPC_NOWAIT);
+            size_t entry_result = msgrcv(p_context->message_queue_id,&entry_from_lister, sizeof(files_list_entry_transmit_t),COMMAND_CODE_FILE_ENTRY,IPC_NOWAIT);
+            if (entry_result == -1){
+                if (errno == ENOMSG) {
+                    //attendre 1000 mili secondes
+                    usleep(100000);
+                } else {
+                    perror("Erreur lors de la lecture du message");
+                    exit(EXIT_FAILURE);
+                }
+            }else{
+                if(entry_from_lister.mtype == MSG_TYPE_TO_SOURCE_LISTER){
+                    add_entry_to_tail(&source,&entry_from_lister.payload);
+                }
+                if(entry_from_lister.mtype == MSG_TYPE_TO_DESTINATION_LISTER){
+                    add_entry_to_tail(&destination,&entry_from_lister.payload);
+                }
+            }
+            //gestion des message de fin de list -> sortie de la boucle si toutes les entrées sont transmises
+            if(entry_from_lister.reply_to != 0){
+            size_t end_result = msgrcv(p_context->message_queue_id,&end_message, sizeof(simple_command_t),COMMAND_CODE_LIST_COMPLETE,IPC_NOWAIT);
             if (end_result == -1) {
                 if (errno == ENOMSG) {
-                    // attendre 1000 mili seconde
+                    // attendre 1000 mili secondes
                     usleep(100000);
                 } else {
                     perror("Erreur lors de la lecture du message");
@@ -74,9 +92,10 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
                 if (end_message.mtype == MSG_TYPE_TO_DESTINATION_LISTER) {
                     lister_dest = false;
                 }
-                if (!lister_source && !lister_dest) {
+                if (!lister_source && !lister_dest ) {
                     break;
                 }
+            }
             }
         }
         /*
@@ -181,7 +200,6 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
     if(the_config->verbose) {
         printf(" End \n");
     }
-    return;
 }
 
 /*!
@@ -235,7 +253,6 @@ void make_files_list(files_list_t *list, char *target_path) {
  * @param msg_queue is the id of the MQ used for communication
  */
 void make_files_lists_parallel(files_list_t *src_list, files_list_t *dst_list, configuration_t *the_config, int msg_queue) {
-
 }
 
 /*!

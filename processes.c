@@ -174,10 +174,10 @@ void lister_process_loop(void *parameters) {
         current_entry = complete_list.head;
         clear_files_list(&build_list);
         //envoye du message de fin de completion de liste
-        send_list_end(lister_config->my_receiver_id,MSG_TYPE_TO_MAIN);
+        send_list_end(lister_config->my_receiver_id,lister_config->my_recipient_id);
         //transmission des entrées à jour au main process une par une
         while (current_entry != NULL) {
-            send_files_list_element(lister_config->my_receiver_id,MSG_TYPE_TO_MAIN,current_entry);
+            send_files_list_element(lister_config->my_receiver_id,lister_config->my_recipient_id,current_entry);
             current_entry = current_entry->next;
         }
         //fin du processus
@@ -188,7 +188,7 @@ void lister_process_loop(void *parameters) {
             exit(EXIT_FAILURE);
         }
         // send code TERMINATE_OK au main
-        send_terminate_confirm(lister_config->my_receiver_id,MSG_TYPE_TO_MAIN);
+        send_terminate_confirm(lister_config->my_receiver_id,lister_config->my_recipient_id);
     }
 }
 
@@ -210,7 +210,7 @@ void analyzer_process_loop(void *parameters) {
         //boucle infini
         while (1) {
             //gestion message de terminaison
-            int end_result = msgrcv(analyzer_config->my_receiver_id,&end_message, sizeof(simple_command_t),COMMAND_CODE_TERMINATE,IPC_NOWAIT);
+            size_t end_result = msgrcv(analyzer_config->my_receiver_id,&end_message, sizeof(simple_command_t),COMMAND_CODE_TERMINATE,IPC_NOWAIT);
             if (end_result == -1) {
                 if(errno == ENOMSG){
                     // attendre 1000 mili seconde
@@ -225,7 +225,7 @@ void analyzer_process_loop(void *parameters) {
             }
 
             //gestion message d'analyse fichier / dossier
-            int dir_result = msgrcv(analyzer_config->my_receiver_id,&dir_message, sizeof(analyze_dir_command_t),COMMAND_CODE_ANALYZE_DIR,IPC_NOWAIT);
+            size_t dir_result = msgrcv(analyzer_config->my_receiver_id,&dir_message, sizeof(analyze_dir_command_t),COMMAND_CODE_ANALYZE_DIR,IPC_NOWAIT);
             if (dir_result == -1) {
                 if (errno == ENOMSG) {
                     // attendre 1000 mili seconde
@@ -239,7 +239,7 @@ void analyzer_process_loop(void *parameters) {
                 send_analyze_dir_command(analyzer_config->my_receiver_id,COMMAND_CODE_FILE_ANALYZED,dir_message.target);
                 break;
             }
-            int file_result = msgrcv(analyzer_config->my_receiver_id,&file_message, sizeof(analyze_file_command_t),COMMAND_CODE_ANALYZE_FILE,IPC_NOWAIT);
+            size_t file_result = msgrcv(analyzer_config->my_receiver_id,&file_message, sizeof(analyze_file_command_t),COMMAND_CODE_ANALYZE_FILE,IPC_NOWAIT);
             if (file_result == -1) {
                 if (errno == ENOMSG) {
                     // attendre 1000 mili seconde
@@ -264,7 +264,7 @@ void analyzer_process_loop(void *parameters) {
         }
 
         // send code TERMINATE_OK au main
-        send_terminate_confirm(analyzer_config->my_receiver_id,MSG_TYPE_TO_MAIN);
+        send_terminate_confirm(analyzer_config->my_receiver_id,analyzer_config->my_recipient_id);
     }
 }
 
@@ -276,7 +276,10 @@ void analyzer_process_loop(void *parameters) {
 void clean_processes(configuration_t *the_config, process_context_t *p_context) {
     // Do nothing if not parallel
     if (the_config->is_parallel) {
-        int count_lister_end = 0;
+        bool lister_source = true;
+        bool lister_destination = true;
+        bool analyzer_source = true;
+        bool analyzer_destination = true;
         simple_command_t end_message;
         // Send terminate
         //envoye des messages de terminaison des processus fils
@@ -289,20 +292,33 @@ void clean_processes(configuration_t *the_config, process_context_t *p_context) 
         send_terminate_command(p_context->message_queue_id,MSG_TYPE_TO_DESTINATION_ANALYZERS);
         // Wait for responses
         //Attente de la reception du message de comfirmation de terminaison des processus fils
-	if (the_config->verbose) {
-            printf("Wait until receive terminate confirm command from lister and analyzer \n");
-        }        
-	while (count_lister_end < 4) {
-            memset(&end_message,0, sizeof(simple_command_t));
-            if (msgrcv(p_context->message_queue_id,&end_message, sizeof(simple_command_t),COMMAND_CODE_TERMINATE_OK,0) == -1) {
-                perror("Erreur lors de la reception du message de terminaison ");
-                exit(EXIT_FAILURE);
-            }
-            ++count_lister_end;
+        if (the_config->verbose) {
+                printf("Wait until receive terminate confirm command from lister and analyzer \n");
+        }
+        while (lister_source || lister_destination || analyzer_source || analyzer_destination) {
+                memset(&end_message,0, sizeof(simple_command_t));
+                if (msgrcv(p_context->message_queue_id,&end_message, sizeof(simple_command_t),COMMAND_CODE_TERMINATE_OK,0) == -1) {
+                    perror("Erreur lors de la reception du message de terminaison ");
+                    exit(EXIT_FAILURE);
+                }
+                switch (end_message.mtype) {
+                    case MSG_TYPE_TO_SOURCE_LISTER:
+                        lister_source = false;
+                        break;
+                    case MSG_TYPE_TO_DESTINATION_LISTER:
+                        lister_destination = false;
+                        break;
+                    case MSG_TYPE_TO_SOURCE_ANALYZERS:
+                        analyzer_source = false;
+                        break;
+                    case MSG_TYPE_TO_DESTINATION_ANALYZERS:
+                        analyzer_destination = false;
+                        break;
+                }
         }
         // Free allocated memory
         //Libération de la mémoire allouer
-	if (the_config->verbose) {
+        if (the_config->verbose) {
             printf("Free allocated memory \n");
         }
         free(p_context->destination_analyzers_pids);
@@ -310,7 +326,7 @@ void clean_processes(configuration_t *the_config, process_context_t *p_context) 
 
         // Free the MQ
         //Destruction de la file de message
-	if (the_config->verbose) {
+        if (the_config->verbose) {
             printf("Message queue destruction \n");
         }
         if (msgctl(p_context->message_queue_id,IPC_RMID,NULL) == -1) {
@@ -318,11 +334,16 @@ void clean_processes(configuration_t *the_config, process_context_t *p_context) 
             exit(EXIT_FAILURE);
         }
         free(p_context);
-	if (the_config->verbose) {
+        if (the_config->verbose) {
             printf("Clean END \n");
         }
     }
 }
 void request_element_details(int msg_queue, files_list_entry_t *entry, lister_configuration_t *cfg, int *current_analyzers){
-    send_analyze_file_command(msg_queue,COMMAND_CODE_ANALYZE_FILE,entry);
+    if(cfg->my_recipient_id == MSG_TYPE_TO_SOURCE_LISTER){
+        send_analyze_file_command(msg_queue,MSG_TYPE_TO_SOURCE_ANALYZERS,entry);
+    }
+    if(cfg->my_recipient_id == MSG_TYPE_TO_DESTINATION_LISTER){
+        send_analyze_file_command(msg_queue,MSG_TYPE_TO_DESTINATION_ANALYZERS,entry);
+    }
 }
