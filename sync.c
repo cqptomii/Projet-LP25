@@ -25,7 +25,7 @@
  */
 void synchronize(configuration_t *the_config, process_context_t *p_context) {
     // Init list
-    if (the_config->verbose){
+    if (the_config->verbose) {
         printf(" Source / Destination list init \n");
     }
     files_list_t source;
@@ -37,11 +37,11 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
     files_list_t difference;
     difference.head=NULL;
     difference.tail=NULL;
-    if(the_config->is_parallel){
+    if (the_config->is_parallel) {
         bool lister_source = true;
         bool lister_dest = true;
         //envoie des commandes de listages de repertoires au deux listeurs
-	if(the_config->verbose){
+	if (the_config->verbose) {
             printf("Send analyze directory command to listers \n");
         }        
 	send_analyze_dir_command(p_context->message_queue_id,MSG_TYPE_TO_SOURCE_LISTER,the_config->source);
@@ -50,108 +50,107 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
         simple_command_t end_message;
         memset(&end_message,0, sizeof(simple_command_t));
         //boucle infini
-	if(the_config->verbose) {
+	if (the_config->verbose) {
             printf("Build file lists on target, source : %s , destination : %s |  \n",the_config->source,the_config->destination);
         }        
-	while(1){
+	while (1) {
             //attente d'entrée de liste de fichier à ajouter
             //gestion des message de fin de list -> sortie de la boucle
             int end_result = msgrcv(p_context->message_queue_id,&end_message, sizeof(simple_command_t),COMMAND_CODE_LIST_COMPLETE,IPC_NOWAIT);
-            if(end_result == -1){
-                if(errno == ENOMSG){
+            if (end_result == -1) {
+                if (errno == ENOMSG) {
                     // attendre 1000 mili seconde
                     usleep(100000);
-                }else{
+                } else {
                     perror("Erreur lors de la lecture du message");
                     exit(EXIT_FAILURE);
                 }
-            }else{
-                if(end_message.mtype == MSG_TYPE_TO_SOURCE_LISTER){
+            } else {
+                if (end_message.mtype == MSG_TYPE_TO_SOURCE_LISTER) {
                     lister_source = false;
                 }
-                if(end_message.mtype == MSG_TYPE_TO_DESTINATION_LISTER){
+                if (end_message.mtype == MSG_TYPE_TO_DESTINATION_LISTER) {
                     lister_dest = false;
                 }
-                if(!lister_source && !lister_dest){
+                if (!lister_source && !lister_dest) {
                     break;
                 }
             }
         }
         /*
-        if(the_config->verbose) {
+        if (the_config->verbose) {
             printf("Build file list on target : %s  | ",the_config->source);
         }
         make_files_lists_parallel(&source,&destination,the_config,0);
         if (the_config->verbose) {
             display_files_list(&source);
         }
-        if(the_config->verbose){
+        if (the_config->verbose) {
             printf("\n\n");
         }
         if (the_config->verbose) {
             display_files_list(&destination);
         }
-        if(the_config->verbose){
+        if (the_config->verbose) {
             printf("\n\n");
         }*/
-    }
-    else{
+    } else {
         //Build source / destination / difference
-        if(the_config->verbose) {
+        if (the_config->verbose) {
             printf("Build file list on target : %s  | ",the_config->source);
         }
         make_files_list(&source,the_config->source);
         if (the_config->verbose) {
             display_files_list(&source);
         }
-        if(the_config->verbose){
+        if (the_config->verbose) {
             printf("\n\n");
         }
-        if(the_config->verbose) {
+        if (the_config->verbose) {
             printf("Build file list on target : %s  | ",the_config->destination);
         }
         make_files_list(&destination,the_config->destination);
         if (the_config->verbose) {
             display_files_list(&destination);
         }
-        if(the_config->verbose){
+        if (the_config->verbose) {
             printf("\n\n");
         }
     }
     // build file list difference
     files_list_entry_t *cmp_source = source.head;
     files_list_entry_t *cmp_destination;
-    if(the_config->verbose){
+    if (the_config->verbose) {
         printf("Source and destination comparaison \n");
     }
-    while(cmp_source){
-        if(destination.head) {
+    while (cmp_source) {
+        if (destination.head) {
             cmp_destination=find_entry_by_name(&destination, cmp_source->path_and_name, strlen(the_config->source), strlen(the_config->destination));
             if (!cmp_destination) {
-                if(the_config->verbose){
+                if (the_config->verbose) {
                     printf("Add file %s to difference \n",cmp_source->path_and_name);
                 }
                 add_file_entry(&difference, cmp_source->path_and_name);
-            }else{
-                if(the_config->verbose) {
+            } else {
+                if (the_config->verbose) {
                     printf(" Verification of files differences : ");
                 }
                 if (mismatch(cmp_source, cmp_destination, the_config->uses_md5)) {
-                    if(the_config->verbose) {
+                    if (the_config->verbose) {
                         printf(" DIFFERENT \n");
                     }
                     add_file_entry(&difference, cmp_source->path_and_name);
-                    if(the_config->verbose){
+                    if (the_config->verbose) {
                         printf("Add file %s to difference \n",cmp_source->path_and_name);
                     }
                 }
-                if(the_config->verbose) {
+                if (the_config->verbose) {
                     printf(" EQUAL \n");
                 }
             }
-        }else{
+        } else {
             add_file_entry(&difference,cmp_source->path_and_name);
-            if(the_config->verbose){
+            if (the_config->verbose) {
                 printf("Add file %s to difference \n",cmp_source->path_and_name);
             }
         }
@@ -161,17 +160,17 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
     if (the_config->verbose) {
         display_files_list(&difference);
     }
-    if(the_config->verbose){
+    if (the_config->verbose) {
         printf("|| Copy file difference || \n");
     }
     files_list_entry_t *cmp_difference = difference.head;
-    if(!the_config->dry_run) {
+    if (!the_config->dry_run) {
         while (cmp_difference) {
             copy_entry_to_destination(cmp_difference, the_config);
             cmp_difference = cmp_difference->next;
         }
     }
-    if(the_config->verbose) {
+    if (the_config->verbose) {
         printf(" clear files lists  : ");
     }
     clear_files_list(&difference);
@@ -197,10 +196,10 @@ bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
               return true;  // Les empreintes MD5 sont différentes
           }
     }
-    if (difftime(lhd->mtime.tv_nsec,rhd->mtime.tv_nsec) == 0.0 && difftime(lhd->mtime.tv_sec,rhd->mtime.tv_sec) == 0.0){
-        if(lhd->size == rhd->size){
-           if(lhd->entry_type == rhd->entry_type){
-               if(lhd->mode == rhd->mode){
+    if (difftime(lhd->mtime.tv_nsec,rhd->mtime.tv_nsec) == 0.0 && difftime(lhd->mtime.tv_sec,rhd->mtime.tv_sec) == 0.0) {
+        if (lhd->size == rhd->size) {
+           if (lhd->entry_type == rhd->entry_type) {
+               if (lhd->mode == rhd->mode) {
                    return false;
                }
            }
@@ -217,8 +216,8 @@ bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
 void make_files_list(files_list_t *list, char *target_path) {
     make_list(list,target_path);
     files_list_entry_t *cmp=list->head;
-    while(cmp){
-        if(get_file_stats(cmp)==-1){
+    while (cmp) {
+        if (get_file_stats(cmp)==-1) {
             printf("Error  \n");
             return;
         }
@@ -248,7 +247,7 @@ void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t
     //delete prefix from file_list_entry
     if (S_ISREG(source_entry->mode)) {
         concat_path(file_created_path, the_config->destination, source_entry->path_and_name+strlen(the_config->source)+1);
-        if(the_config->verbose) {
+        if (the_config->verbose) {
             printf("|| Copying %s into %s ||", file_created_path, the_config->destination);
         }
         int source_fd = open(source_entry->path_and_name, O_RDONLY);
@@ -262,17 +261,17 @@ void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t
         char *token = strtok(source_entry->path_and_name+strlen(the_config->source)+1,sep);
         char dir_path[256] = "";
         strcat(dir_path,the_config->destination);
-        while(strcmp(dir_path,file_created_path) != 0){
+        while (strcmp(dir_path,file_created_path) != 0) {
             strcat(dir_path,sep);
             strcat(dir_path,token);
-            if(strcmp(dir_path,file_created_path)!=0) {
-                if(mkdir(dir_path,0777) != 0) {
-                    if(the_config->verbose) {
+            if (strcmp(dir_path,file_created_path)!=0) {
+                if (mkdir(dir_path,0777) != 0) {
+                    if (the_config->verbose) {
                         printf(" Failed \n");
                     }
                     perror("Canno't open the path \n");
                     return;
-                }else{
+                } else {
 
                 }
             }
@@ -280,7 +279,7 @@ void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t
         }
         int destination_fd = open(file_created_path, O_WRONLY | O_CREAT | O_TRUNC, source_entry->mode);
         if (destination_fd == -1) {
-            if(the_config->verbose) {
+            if (the_config->verbose) {
                 printf(" Failed \n");
             }
             perror("Error during destination file opening \n");
@@ -301,13 +300,13 @@ void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t
         // Keeping access modes and mtime
         struct timespec mtime[2] = {source_entry->mtime, source_entry->mtime};
         if (utimensat(AT_FDCWD, file_created_path, mtime, 0) == -1) {
-            if(the_config->verbose) {
+            if (the_config->verbose) {
                 printf(" Failed \n");
             }
             perror("Error setting acces modes and mtime");
             return;
         }
-        if(the_config->verbose) {
+        if (the_config->verbose) {
             printf("Succes \n");
         }
     }
@@ -321,21 +320,21 @@ void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t
  * @param target is the target dir whose content must be listed
  */
 void make_list(files_list_t *list, char *target) {
-    if(!list || !target){
+    if (!list || !target) {
         return;
     }
     DIR *target_dir;
     struct dirent *dir_entry;
     char path_file[PATH_SIZE];
-    if(!(target_dir = open_dir(target))){// Check file opening
+    if (!(target_dir = open_dir(target))) {// Check file opening
         return;
     }
-    while((dir_entry=get_next_entry(target_dir)) != NULL){
+    while ((dir_entry=get_next_entry(target_dir)) != NULL) {
         concat_path(path_file, target, dir_entry->d_name);
-        if(dir_entry->d_type == DT_REG){
+        if (dir_entry->d_type == DT_REG) {
             add_file_entry(list, path_file);
         }
-        if(dir_entry->d_type == DT_DIR){
+        if (dir_entry->d_type == DT_DIR) {
             make_list(list,path_file);
         }
     }
@@ -369,13 +368,13 @@ DIR *open_dir(char *path) {
  * Relevant entries are all regular files and dir, except . and ..
  */
 struct dirent *get_next_entry(DIR *dir)  {
-    if(!dir){
+    if (!dir) {
         return NULL;
     }
     struct dirent *next_entry;
-    while((next_entry = readdir(dir))!=NULL){
-        if(next_entry->d_type == DT_REG || next_entry->d_type == DT_DIR){
-            if(strcmp(next_entry->d_name, ".") != 0 && strcmp(next_entry->d_name, "..") != 0){
+    while ((next_entry = readdir(dir))!=NULL) {
+        if (next_entry->d_type == DT_REG || next_entry->d_type == DT_DIR) {
+            if (strcmp(next_entry->d_name, ".") != 0 && strcmp(next_entry->d_name, "..") != 0) {
                 return next_entry;
             }
         }
