@@ -26,7 +26,7 @@ void display_help(char *my_name) {
 void init_configuration(configuration_t *the_config) {
     if(the_config) {
         the_config->uses_md5 = false;
-        the_config->is_parallel = false;
+        the_config->is_parallel = true;
         the_config->processes_count = 1;
         the_config->dry_run = false;
         the_config->verbose = false;
@@ -59,19 +59,19 @@ int set_configuration(configuration_t *the_config, int argc, char *argv[]) {
     while ((opt = (getopt_long(argc, argv, "n:h", my_opts, NULL))) != -1) {
         switch (opt) {
             case 'd':
-                the_config->uses_md5=optarg;
+                the_config->uses_md5 = optarg;
                 ++parameter_count;
                 break;
             case'p':
-                the_config->is_parallel=optarg;
+                the_config->is_parallel = false;
                 ++parameter_count;
                 break;
                 case 'v':
-                the_config->verbose=true;
+                the_config->verbose = true;
                 ++parameter_count;
                 break;
             case 'r':
-                the_config->dry_run=true;
+                the_config->dry_run = true;
                 ++parameter_count;
                 break;
             case 'n':

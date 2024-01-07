@@ -159,8 +159,12 @@ void lister_process_loop(void *parameters) {
             add_entry_to_tail(&complete_list,&receipt_entry.payload);
             --file_send;
             if (current_entry != NULL) {
-                send_analyze_file_command(lister_config->my_receiver_id, COMMAND_CODE_ANALYZE_FILE, current_entry);
-                current_entry = current_entry->next;
+		if(lister_config->my_recipient_id == MSG_TYPE_TO_SOURCE_LISTER){
+                    send_analyze_file_command(lister_config->my_receiver_id, MSG_TYPE_TO_SOURCE_ANALYZERS, current_entry);
+                }else{
+                    send_analyze_file_command(lister_config->my_receiver_id, MSG_TYPE_TO_DESTINATION_ANALYZERS, current_entry);
+                }               
+		current_entry = current_entry->next;
                 ++file_send;
             }
             if (file_send == 0) {
@@ -249,8 +253,13 @@ void analyzer_process_loop(void *parameters) {
                 files_list_entry_t *entry = &file_message.payload;
                 get_file_stats(entry);
                 //send response
-                send_analyze_file_response(analyzer_config->my_receiver_id,COMMAND_CODE_FILE_ANALYZED,entry);
-                break;
+        	if(analyzer_config->my_recipient_id == MSG_TYPE_TO_SOURCE_ANALYZERS){
+                    send_analyze_file_response(analyzer_config->my_receiver_id,MSG_TYPE_TO_SOURCE_LISTER,entry);
+                }
+                if(analyzer_config->my_recipient_id == MSG_TYPE_TO_DESTINATION_ANALYZERS) {
+                    send_analyze_file_response(analyzer_config->my_receiver_id,MSG_TYPE_TO_DESTINATION_LISTER,entry);
+                }        
+		break;
             }
         }
 

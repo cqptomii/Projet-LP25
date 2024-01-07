@@ -49,6 +49,8 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
 
         simple_command_t end_message;
         memset(&end_message,0, sizeof(simple_command_t));
+	files_list_entry_transmit_t entry_from_lister;
+        memset(&entry_from_lister,0, sizeof(files_list_entry_transmit_t));
         //boucle infini
 	if (the_config->verbose) {
             printf("Build file lists on target, source : %s , destination : %s |  \n",the_config->source,the_config->destination);
